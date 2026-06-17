@@ -1,3 +1,26 @@
+let userNickname = '';
+
+if (!localStorage.getItem('proton_nickname')) {
+    window.location.href = 'index.html';
+} else {
+    userNickname = localStorage.getItem('proton_nickname');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('input');
+    if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    fetchHistory();
+    setInterval(fetchHistory, 1500);
+});
+
+async function fetchHistory() {
+    try {
+        const response = await fetch('/api/messages');
+        const messages = await response.json();
+        renderMessages(messages);
+    } catch (e) { console.error("Sync data transaction error:", e); }
+}
+
 function renderMessages(messages) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
@@ -14,13 +37,10 @@ function renderMessages(messages) {
         let content = `<div class="author">${data.author}</div>`;
         if (data.text) content += `<div>${data.text}</div>`;
         
-        // DYNAMIC MEDIA SNAPSHOT INTERCEPTOR
         if (data.imageUrl) {
-            // Check if the Base64 data string contains a video format descriptor
             if (data.imageUrl.includes('data:video/')) {
                 content += `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
             } else {
-                // Otherwise, treat it as a standard static image (including .webp, .png, .jpg)
                 content += `<img src="${data.imageUrl}" alt="photo">`;
             }
         }
@@ -29,4 +49,58 @@ function renderMessages(messages) {
         messagesDiv.appendChild(item);
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+async function sendMessage(imageUrl = '') {
+    const input = document.getElementById('input');
+    if (!input) return;
+    
+    const text = input.value.trim();
+    if (!text && !imageUrl) return;
+
+    try {
+        await fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, imageUrl, author: userNickname })
+        });
+        input.value = '';
+        fetchHistory();
+    } catch (e) { console.error("Datagram package transmission failed:", e); }
+}
+
+function uploadImage(inputElement) {
+    const files = inputElement.files;
+    if (!files || files.length === 0) return;
+
+    const targetFile = files[0];
+    console.log("Converting static media payload array to binary Base64 text string...");
+    appendSystemMessage('System status: Processing picture payload stream...');
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        console.log("Conversion successful. Transmitting compressed packet data...");
+        sendMessage(e.target.result);
+    };
+    reader.onerror = function (error) {
+        console.error("FileReader processing intercept error:", error);
+        alert('Upload failed: File structure streaming conversion error.');
+    };
+    
+    reader.readAsDataURL(targetFile); 
+}
+
+function appendSystemMessage(text) {
+    const messagesDiv = document.getElementById('messages');
+    if (!messagesDiv) return;
+    const item = document.createElement('div');
+    item.style.fontSize = '12px';
+    item.style.color = '#888';
+    item.textContent = text;
+    messagesDiv.appendChild(item);
+}
+
+function logout() { 
+    localStorage.removeItem('proton_nickname');
+    window.location.href = 'index.html';
 }
