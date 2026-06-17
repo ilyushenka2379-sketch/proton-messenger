@@ -1,48 +1,98 @@
-const messagesDiv = document.getElementById('messages');
-const input = document.getElementById('input');
+// --- ЛОГИКА ВИДЕОЗВОНКОВ (WebRTC) ---
+let localStream;
+let peerConnection;
+const localVideo = document.getElementById('localVideo');
+const remoteVideo = document.getElementById('remoteVideo');
+const callBtn = document.getElementById('callBtn');
+const hangupBtn = document.getElementById('hangupBtn');
 
-// Автоматически выбирает ws:// для компьютера и wss:// для интернета
-const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-const socket = new WebSocket(protocol + window.location.host);
+// Стандартные бесплатные сервера от Google, чтобы устройства нашли друг друга через интернет
+const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
 
-socket.onopen = () => {
-    console.log('Успешно подключились к серверу Proton напрямую!');
-};
+// Перехватываем сигналы звонка от сервера
+function handleCallSignal(message) {
+    if (!peerConnection) setupPeerConnection();
 
-// Функция отрисовки одного сообщения на экране
-function appendMessage(text) {
-    const item = document.createElement('div');
-    item.classList.add('msg');
-    item.textContent = text;
-    messagesDiv.appendChild(item);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight; // Скролл вниз
+    if (message.sdp) {
+        peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp))
+            .then(() => {
+                if (peerConnection.remoteDescription.type === 'offer') {
+                    peerConnection.createAnswer().then(answer => {
+                        peerConnection.setLocalDescription(answer);
+                        socket.send(JSON.stringify({ type: 'call-signal', sdp: answer }));
+                    });
+                }
+            });
+    } else if (message.candidate) {
+        peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate));
+    }
 }
 
-// Принимаем данные от сервера
+// Настройка прямого соединения между браузерами
+function setupPeerConnection() {
+    peerConnection = new RTCPeerConnection(rtcConfig);
+
+    // Отправляем свои сетевые координаты собеседнику
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            socket.send(JSON.stringify({ type: 'call-signal', candidate: event.candidate }));
+        }
+    };
+
+    // Как только видеопоток от собеседника пойман — выводим на большой экран
+    peerConnection.ontrack = (event) => {
+        if (remoteVideo) remoteVideo.srcObject = event.streams[0];
+    };
+
+    // Добавляем наше видео в поток для отправки
+    if (localStream) {
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    }
+    
+    if (callBtn) callBtn.style.display = 'none';
+    if (hangupBtn) hangupBtn.style.display = 'inline-block';
+}
+
+// Функция нажатия кнопки "Позвонить"
+async function startCall() {
+    try {
+        // Запрашиваем доступ к камере и микрофону смартфона/ПК
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (localVideo) localVideo.srcObject = localStream;
+
+        setupPeerConnection();
+
+        // Создаем предложение о звонке (Offer) и шлем его через сервер
+        const offer = await peerConnection.createOffer();
+        await peerConnection.setLocalDescription(offer);
+        socket.send(JSON.stringify({ type: 'call-signal', sdp: offer }));
+    } catch (err) {
+        alert('Не удалось включить камеру/микрофон: ' + err.message);
+    }
+}
+
+// Функция завершения звонка
+function hangUp() {
+    if (peerConnection) peerConnection.close();
+    if (localStream) localStream.getTracks().forEach(track => track.stop());
+    peerConnection = null;
+    if (localVideo) localVideo.srcObject = null;
+    if (remoteVideo) remoteVideo.srcObject = null;
+    if (callBtn) callBtn.style.display = 'inline-block';
+    if (hangupBtn) hangupBtn.style.display = 'none';
+}
+
+// Модифицируем старый приемщик сообщений, чтобы он ловил технические сигналы звонка
+const originalOnMessage = socket.onmessage;
 socket.onmessage = (event) => {
-    const response = JSON.parse(event.data);
-    console.log('Сайт получил пакет:', response);
-
-    if (response.type === 'history') {
-        // Если прилетела история — очищаем экран и выводим старые сообщения
-        messagesDiv.innerHTML = '';
-        response.data.forEach(msg => appendMessage(msg.text));
-    } else if (response.type === 'message') {
-        // Если прилетело новое живое сообщение — просто добавляем его в конец
-        appendMessage(response.data);
-    }
+    try {
+        const parsed = JSON.parse(event.data);
+        if (parsed.type === 'call-signal') {
+            handleCallSignal(parsed);
+            return;
+        }
+    } catch (e) {}
+    
+    // Если это не сигнал звонка, отдаем управление старому коду чата
+    if (originalOnMessage) originalOnMessage(event);
 };
-
-// Функция отправки текста
-function sendMessage() {
-    if (!input) return;
-    const text = input.value.trim();
-    if (text && socket.readyState === WebSocket.OPEN) {
-        socket.send(text); // Пуляем строку
-        input.value = '';
-    }
-}
-
-input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-});

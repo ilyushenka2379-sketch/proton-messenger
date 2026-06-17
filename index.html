@@ -1,36 +1,24 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <title>Proton Messenger</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
-        #chat { max-width: 500px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; }
-        #messages { height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; }
-        .msg { margin-bottom: 8px; padding: 6px 10px; background: #e1f5fe; border-radius: 4px; display: inline-block; clear: both; float: left; }
-        #form { display: flex; }
-        #input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-    </style>
-    <!-- Подключаем специальный скрипт сокетов от нашего сервера -->
-    <script src="https://cloudflare.com"></script>
-</head>
 <body>
 
     <h2>Messenger Proton 🚀</h2>
+    
+    <!-- Блок для видеозвонка -->
+    <div id="video-container" style="margin-bottom: 15px;">
+        <video id="localVideo" autoplay playsinline muted style="width: 120px; background: #333; border-radius: 8px;"></video>
+        <video id="remoteVideo" autoplay playsinline style="width: 250px; background: #222; border-radius: 8px; margin-left: 10px;"></video>
+        <div style="margin-top: 5px;">
+            <button id="callBtn" onclick="startCall()" style="background: #28a745;">📞 Позвонить</button>
+            <button id="hangupBtn" onclick="hangUp()" style="background: #dc3545; display: none;">🛑 Положить трубку</button>
+        </div>
+    </div>
+
     <div id="chat">
-        <!-- Блок только для сообщений -->
         <div id="messages"></div>
-        
-        <!-- Блок ввода должен быть СНАРУЖИ, под сообщениями -->
         <div id="form">
             <input id="input" autocomplete="off" placeholder="Type something..." />
             <button onclick="sendMessage()">Send Message</button>
         </div>
     </div>
 
-    <script src="https://cloudflare.com"></script>
-
     <script src="app.js"></script>
 </body>
-</html>
