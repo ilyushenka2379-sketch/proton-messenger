@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Proton Messenger 2.0</title>
@@ -25,40 +25,39 @@
 </head>
 <body>
 
-    <!-- SCREEN 1: AUTHENTICATION -->
+    <!-- ЭКРАН 1: ВХОД -->
     <div id="auth-screen" class="container">
-        <h2>Login to Proton 🚀</h2>
-        <p>Welcome! Please sign in with Google to start chatting.</p>
-        <button class="btn-google" onclick="loginWithGoogle()">
+        <h2>Вход в Proton 🚀</h2>
+        <p>Добро пожаловать! Войдите через Google, чтобы начать общение.</p>
+        <button id="login-button" class="btn-google" onclick="loginWithGoogle()">
             <img src="https://google.com" alt="Google" width="20">
-            Sign in with Google
+            Войти через Google
         </button>
     </div>
 
-    <!-- SCREEN 2: CHOOSE NICKNAME -->
+    <!-- ЭКРАН 2: ВЫБОР ИМЕНИ -->
     <div id="name-screen" class="container hidden">
-        <h2>What is your name? 🤔</h2>
-        <p>Please enter a nickname that other users will see.</p>
-        <input type="text" id="nickname-input" placeholder="Your nickname..." />
-        <button class="btn-main" onclick="saveNickname()">Save and Enter</button>
+        <h2>Как вас зовут? 🤔</h2>
+        <p>Пожалуйста, выберите имя, которое будут видеть другие пользователи.</p>
+        <input type="text" id="nickname-input" placeholder="Ваше имя или никнейм..." />
+        <button class="btn-main" onclick="saveNickname()">Сохранить и войти</button>
     </div>
 
-    <!-- SCREEN 3: MAIN CHAT -->
+    <!-- ЭКРАН 3: ГЛАВНЫЙ ЧАТ -->
     <div id="chat-screen" class="container hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h3 style="margin: 0;">Proton Chat 💬</h3>
-            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold;">Logout</button>
+            <h3 style="margin: 0;">Чат Proton 💬</h3>
+            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold;">Выйти</button>
         </div>
         <div id="messages"></div>
         <div id="form">
             <label class="file-label" for="file-input">📎</label>
             <input type="file" id="file-input" accept="image/*" onchange="uploadImage(this)" />
-            <input id="input" autocomplete="off" placeholder="Type a message..." />
-            <button class="btn-main" style="width: auto; padding: 12px 20px;" onclick="sendMessage()">Send</button>
+            <input id="input" autocomplete="off" placeholder="Введите сообщение..." />
+            <button class="btn-main" style="width: auto; padding: 12px 20px warm;" onclick="sendMessage()">Отправить</button>
         </div>
     </div>
 
-    <!-- Firebase Legacy SDK Core Scripts -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
