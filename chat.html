@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Proton - Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; box-sizing: border-box; }
+        #messages { flex: 1; overflow-y: auto; border: 1px solid #eee; padding: 15px; background: #fafafa; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; font-size: 15px; }
+        .msg.my { background: #007bff; color: white; align-self: flex-end; }
+        .msg.other { background: #e4e6eb; color: black; align-self: flex-start; }
+        .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
+        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        #form { display: flex; gap: 8px; align-items: center; }
+        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .file-label { background: #6c757d; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        #file-input { display: none; }
+        .btn-main { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Proton Chat 💬</h3>
+            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold; font-size: 16px;">Logout</button>
+        </div>
+        <div id="messages"></div>
+        <div id="form">
+            <label class="file-label" for="file-input">📎</label>
+            <input type="file" id="file-input" accept="image/*" onchange="uploadImage(this)" />
+            <input id="input" autocomplete="off" placeholder="Type a message..." />
+            <button class="btn-main" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script src="https://cloudflare.com"></script>
+    <script src="https://cloudflare.com"></script>
+    
+    <script src="chat.js"></script>
+</body>
+</html>
