@@ -1,36 +1,52 @@
 const express = require('express');
 const path = require('path');
-const http = require('http'); // Нам нужен встроенный модуль http
+const http = require('http');
 const WebSocket = require('ws');
+
+// Подключаем нашу текстовую базу данных
+const Datastore = require('nedb-promises');
+const db = Datastore.create({ filename: path.join(__dirname, 'messages.db'), autoload: true });
 
 const app = express();
 
 // Раздаём сайт из папки frontend
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, '../frontend')));
 
-// 1. Создаем правильный базовый HTTP-сервер вокруг Express
 const server = http.createServer(app);
-
-// 2. Создаём WebSocket сервер и привязываем его к нашему HTTP-серверу
 const wss = new WebSocket.Server({ server });
-
-// Храним список всех активных пользователей в сети
 const clients = new Set();
 
-wss.on('connection', (ws) => {
+wss.on('connection', async (ws) => {
     clients.add(ws);
     console.log('Пользователь успешно подключился к Proton! 🎉');
 
+    // МАГИЯ: При подключении достаем из базы последние 50 сообщений, сортируем по времени
+    try {
+        const history = await db.find({}).sort({ timestamp: 1 }).limit(50);
+        // Отправляем историю сообщений обратно вошедшему пользователю в виде JSON
+        ws.send(JSON.stringify({ type: 'history', data: history }));
+    } catch (err) {
+        console.error('Ошибка загрузки истории:', err);
+    }
+
     // Ждём сообщение от браузера
-    ws.on('message', (message) => {
-        // Декодируем сообщение из буфера в обычный текст
+    ws.on('message', async (message) => {
         const textMessage = message.toString();
         console.log('Сервер получил сообщение:', textMessage);
+
+        // Создаем объект сообщения с меткой времени
+        const msgObject = {
+            text: textMessage,
+            timestamp: Date.now()
+        };
+
+        // Сохраняем сообщение в файл базы данных messages.db
+        await db.insert(msgObject);
         
         // Пересылаем полученное сообщение ВСЕМ, кто сейчас онлайн
         for (let client of clients) {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(textMessage);
+                client.send(JSON.stringify({ type: 'message', data: textMessage }));
             }
         }
     });
@@ -41,8 +57,6 @@ wss.on('connection', (ws) => {
     });
 });
 
-// 3. Запускаем именно склеенный server, а не app
-// Хостинг сам подставит нужный порт в переменную process.env.PORT, а если её нет — включит 5002
 const PORT = process.env.PORT || 5002;
 server.listen(PORT, () => {
     console.log(`Сервер Proton запущен на порту ${PORT}`);
