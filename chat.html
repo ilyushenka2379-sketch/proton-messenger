@@ -11,12 +11,20 @@
         .msg.my { background: #007bff; color: white; align-self: flex-end; }
         .msg.other { background: #e4e6eb; color: black; align-self: flex-start; }
         .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
-        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        .msg img, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        .msg audio { max-height: 40px; }
         #form { display: flex; gap: 8px; align-items: center; }
         #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .file-label { background: #6c757d; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; }
-        #file-input { display: none; }
+        .file-label, .record-btn { background: #6c757d; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; }
+        .record-btn { background: #28a745; transition: background 0.2s; }
+        .record-btn.recording { background: #dc3545; animation: pulse 1s infinite; }
         .btn-main { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -30,6 +38,10 @@
         <div id="form">
             <label class="file-label" for="file-input">📎</label>
             <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
+            
+            <!-- NEW VOICE RECORD BUTTON -->
+            <button id="record-button" class="record-btn" onclick="toggleRecording()">🎤</button>
+            
             <input id="input" autocomplete="off" placeholder="Type a message..." />
             <button class="btn-main" onclick="sendMessage()">Send</button>
         </div>

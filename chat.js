@@ -37,9 +37,13 @@ function renderMessages(messages) {
         let content = `<div class="author">${data.author}</div>`;
         if (data.text) content += `<div>${data.text}</div>`;
         
+        // MULTI-MEDIA PAYLOAD RENDERING COMPONENT
         if (data.imageUrl) {
             if (data.imageUrl.includes('data:video/')) {
                 content += `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
+            } else if (data.imageUrl.includes('data:audio/')) {
+                // NEW: Dynamic Audio Player Generation
+                content += `<audio src="${data.imageUrl}" controls style="margin-top: 5px; display: block;"></audio>`;
             } else {
                 content += `<img src="${data.imageUrl}" alt="photo">`;
             }
@@ -88,6 +92,64 @@ function uploadImage(inputElement) {
     };
     
     reader.readAsDataURL(targetFile); 
+}
+
+// NEW: SECURE VOICE RECORDING CHANNEL LOGIC
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
+async function toggleRecording() {
+    const recordButton = document.getElementById('record-button');
+    
+    if (!isRecording) {
+        // START RECORDING
+        audioChunks = [];
+        try {
+            console.log("Requesting raw secure microphone hardware uplink...");
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = () => {
+                console.log("Microphone stream stopped. Encoding raw wave chunks to audio data URL...");
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    console.log("Audio payload array stringified successfully. Pushing to datagram packet...");
+                    sendMessage(reader.result); // Pushes the sound Base64 string directly into chat pipeline
+                };
+                reader.readAsDataURL(audioBlob);
+                
+                // Disconnect microphone hardware line to preserve resources
+                stream.getTracks().forEach(track => track.stop());
+            };
+            
+            mediaRecorder.start();
+            isRecording = true;
+            if (recordButton) {
+                recordButton.classList.add('recording');
+                recordButton.textContent = "🛑";
+            }
+            console.log("Voice recording stream pipeline successfully active.");
+        } catch (err) {
+            console.error("Microphone hardware access rejected:", err);
+            alert('Hardware block: Microphone access denied. Check your mobile browser permissions!');
+        }
+    } else {
+        // STOP RECORDING
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        isRecording = false;
+        if (recordButton) {
+            recordButton.classList.remove('recording');
+            recordButton.textContent = "🎤";
+        }
+    }
 }
 
 function appendSystemMessage(text) {
