@@ -9,29 +9,39 @@ const firebaseConfig = {
     appId: "1:109624272725:web:330f2cef607cdc767871dc"
 };
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-
-const messagesDiv = document.getElementById('messages');
-const input = document.getElementById('input');
-
+let db;
 let userNickname = '';
 
-// Route-Guard protection: verify session token validity
 if (!localStorage.getItem('proton_nickname')) {
-    console.warn("Unauthorized access threat blocked. Redirecting backend terminal channel...");
+    console.warn("Session token missing. Route-Guard activated. Redirecting back...");
     window.location.href = 'index.html';
 } else {
     userNickname = localStorage.getItem('proton_nickname');
-    console.log("Secure channel active for user profile:", userNickname);
-    listenToMessages();
 }
 
+window.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('input');
+    
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        console.log("Chat system connected to secure pipeline for profile:", userNickname);
+        listenToMessages();
+        
+        if (input) {
+            input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+        }
+    }
+});
+
 async function sendMessage(imageUrl = '') {
+    const input = document.getElementById('input');
+    if (!input || !db) return;
+    
     const text = input.value.trim();
     if (!text && !imageUrl) return;
 
-    console.log("Publishing standard datagram packet into sync stream...");
+    console.log("Pushing message payload to secure document tree...");
     await db.collection('messages').add({
         text: text,
         imageUrl: imageUrl,
@@ -45,9 +55,9 @@ async function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
 
-    console.log("Intercepting stream array payload buffer...");
+    console.log("Parsing image input payload streaming buffer...");
     const formData = new FormData();
-    formData.append('image', files[0]); // Explicitly sending target element binary array index
+    formData.append('image', files[0]); // Strictly sending target direct element index
 
     try {
         appendSystemMessage('System status: Uploading picture, please wait...');
@@ -57,20 +67,23 @@ async function uploadImage(inputElement) {
         });
         const result = await response.json();
         if (result.success) {
-            console.log("Image payload deployed to CDN host:", result.data.url);
+            console.log("Media array snapshot synced to proxy host CDN:", result.data.url);
             sendMessage(result.data.url);
         } else {
-            console.warn("CDN response payload mismatch:", result);
-            alert('Upload failed');
+            console.warn("CDN response payload error:", result);
+            alert('Hosting service error');
         }
     } catch (e) {
-        console.error("External connection intercept error:", e);
-        alert('Data network pipeline error, retry transfer');
+        console.error("Data pipeline broken:", e);
+        alert('Upload transfer channel error, please retry');
     }
 }
 
 function listenToMessages() {
-    console.log("Establishing remote reactive pipeline connection...");
+    const messagesDiv = document.getElementById('messages');
+    if (!messagesDiv || !db) return;
+
+    console.log("Opening remote reactive dynamic sync channel...");
     db.collection('messages').orderBy('timestamp', 'asc').limitToLast(50)
         .onSnapshot((snapshot) => {
             messagesDiv.innerHTML = '';
@@ -94,11 +107,13 @@ function listenToMessages() {
             });
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }, (error) => {
-            console.error("Dynamic subscription sync broken:", error);
+            console.error("Remote stream sync dropped:", error);
         });
 }
 
 function appendSystemMessage(text) {
+    const messagesDiv = document.getElementById('messages');
+    if (!messagesDiv) return;
     const item = document.createElement('div');
     item.style.fontSize = '12px';
     item.style.color = '#888';
@@ -107,9 +122,7 @@ function appendSystemMessage(text) {
 }
 
 function logout() { 
-    console.log("Clearing state data token, terminating session...");
+    console.log("Clearing access keys, closing tunnel...");
     localStorage.removeItem('proton_nickname');
     window.location.href = 'index.html';
 }
-
-input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
