@@ -13,12 +13,13 @@
         .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
         .msg img, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .msg audio { max-height: 40px; }
-        #form { display: flex; gap: 8px; align-items: center; }
-        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
-        .file-label, .record-btn { background: #6c757d; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; }
+        #form { display: flex; gap: 6px; align-items: center; width: 100%; box-sizing: border-box; }
+        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; min-width: 0; }
+        .file-label, .record-btn { background: #6c757d; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
         .record-btn { background: #28a745; transition: background 0.2s; }
         .record-btn.recording { background: #dc3545; animation: pulse 1s infinite; }
-        .btn-main { background: #007bff; color: white; border: none; padding: 12px 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-main { background: #007bff; color: white; border: none; height: 44px; padding: 0 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+
         
         @keyframes pulse {
             0% { opacity: 1; }
