@@ -2,7 +2,7 @@ const IMGBB_API_KEY = 'de55d39e084ff3311f5e986142c52e4f';
 
 const firebaseConfig = {
     apiKey: "AIzaSyC-IuRsP6vkYD9_pM9aM4pcEnVHGi16_Ec",
-    authDomain: "://firebaseapp.com",
+    authDomain: "proton-e70cd.firebaseapp.com",
     projectId: "proton-e70cd",
     storageBucket: "proton-e70cd.firebasestorage.app",
     messagingSenderId: "109624272725",
@@ -10,86 +10,100 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const db = firebase.firestore();
 
 const authScreen = document.getElementById('auth-screen');
-const nameScreen = document.getElementById('name-screen');
 const chatScreen = document.getElementById('chat-screen');
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('input');
-const nicknameInput = document.getElementById('nickname-input');
+const authNicknameInput = document.getElementById('auth-nickname');
+const authPasswordInput = document.getElementById('auth-password');
+const errorMessage = document.getElementById('error-message');
 const loginButton = document.getElementById('login-button');
 
-let currentUser = null;
 let userNickname = '';
+let isListening = false;
 
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        currentUser = user;
-        console.log("User authorized successfully via Google token:", user.uid);
-        try {
-            const userDoc = await db.collection('users').doc(user.uid).get();
-            if (userDoc.exists) {
-                userNickname = userDoc.data().nickname;
-                showScreen('chat');
-                listenToMessages();
-            } else {
-                showScreen('name');
-            }
-        } catch (error) {
-            console.error("Critical Firestore dynamic verification error:", error);
-            showScreen('name');
-        }
-    } else {
-        console.log("No valid active session detected. Showing authorization interface.");
-        showScreen('auth');
-    }
-});
+// Auto-login check from local browser storage
+if (localStorage.getItem('proton_nickname')) {
+    userNickname = localStorage.getItem('proton_nickname');
+    console.log("Cached session restored for user:", userNickname);
+    showScreen('chat');
+    listenToMessages();
+} else {
+    showScreen('auth');
+}
 
 function showScreen(screen) {
     authScreen.classList.add('hidden');
-    nameScreen.classList.add('hidden');
     chatScreen.classList.add('hidden');
     if (screen === 'auth') authScreen.classList.remove('hidden');
-    if (screen === 'name') nameScreen.classList.remove('hidden');
     if (screen === 'chat') chatScreen.classList.remove('hidden');
 }
 
-function loginWithGoogle() {
-    if (loginButton) loginButton.textContent = "Connecting to Google...";
-    console.log("Initializing dynamic cross-origin identity provider routing...");
+// DATABASE LOGIN AND REGISTRATION LOGIC
+async function handleAuth() {
+    const nickname = authNicknameInput.value.trim().toLowerCase();
+    const password = authPasswordInput.value.trim();
     
-    const provider = new firebase.auth.GoogleAuthProvider();
-    
-    auth.signInWithRedirect(provider).catch(err => {
-        if (loginButton) loginButton.textContent = "Sign in with Google";
-        console.error("Identity tunnel registration failed:", err);
-        alert('Authentication process error: ' + err.message);
-    });
+    if (!nickname || !password) {
+        showError('Please fill in all fields!');
+        return;
+    }
+
+    if (loginButton) loginButton.textContent = "Processing authorization...";
+    errorMessage.classList.add('hidden');
+
+    try {
+        const userDoc = await db.collection('users').doc(nickname).get();
+
+        if (userDoc.exists) {
+            // User exists, verify password
+            const userData = userDoc.data();
+            if (userData.password === password) {
+                console.log("Identity verified successfully for user:", nickname);
+                proceedToChat(nickname);
+            } else {
+                console.warn("Authorization alert: Invalid password attempt for user:", nickname);
+                showError('Incorrect password!');
+            }
+        } else {
+            // New user, register automatically
+            console.log("Creating new secure credential profile for user:", nickname);
+            await db.collection('users').doc(nickname).set({
+                nickname: nickname,
+                password: password
+            });
+            proceedToChat(nickname);
+        }
+    } catch (err) {
+        console.error("Firestore transaction channel error:", err);
+        showError('Database connection error. Try again.');
+    }
 }
 
-async function saveNickname() {
-    const nick = nicknameInput.value.trim();
-    if (!nick) return alert('Name field cannot be empty!');
-    
-    console.log("Syncing custom nickname profile parameters...");
-    await db.collection('users').doc(currentUser.uid).set({ nickname: nick });
-    userNickname = nick;
+function proceedToChat(nickname) {
+    userNickname = nickname;
+    localStorage.setItem('proton_nickname', nickname);
     showScreen('chat');
     listenToMessages();
+}
+
+function showError(text) {
+    if (loginButton) loginButton.textContent = "Sign In / Register";
+    errorMessage.textContent = text;
+    errorMessage.classList.remove('hidden');
 }
 
 async function sendMessage(imageUrl = '') {
     const text = input.value.trim();
     if (!text && !imageUrl) return;
 
-    console.log("Publishing standard datagram packet into sync stream...");
+    console.log("Pushing standard datagram packet into database stream...");
     await db.collection('messages').add({
         text: text,
         imageUrl: imageUrl,
         author: userNickname,
-        uid: currentUser.uid,
         timestamp: firebase.firestore.FieldValue.serverTimestamp()
     });
     input.value = '';
@@ -99,9 +113,9 @@ async function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
 
-    console.log("Intercepting stream array payload buffer...");
+    console.log("Processing image binary stream array payload...");
     const formData = new FormData();
-    formData.append('image', files[0]); // CRITICAL FIX: sending strictly first target array element
+    formData.append('image', files[0]); // Explicitly targeting first element index
 
     try {
         appendSystemMessage('System status: Uploading picture, please wait...');
@@ -114,17 +128,20 @@ async function uploadImage(inputElement) {
             console.log("Image payload deployed to CDN host:", result.data.url);
             sendMessage(result.data.url);
         } else {
-            console.warn("CDN response payload mismatch:", result);
-            alert('Image proxy hosting service rejected the request');
+            console.warn("CDN payload rejected:", result);
+            alert('Hosting service rejected image format');
         }
     } catch (e) {
-        console.error("External connection intercept error:", e);
-        alert('Data uplink pipeline error, please retry');
+        console.error("Pipeline uplink upload error:", e);
+        alert('Data network pipeline error, retry transfer');
     }
 }
 
 function listenToMessages() {
-    console.log("Establishing remote reactive pipeline connection...");
+    if (isListening) return;
+    isListening = true;
+    console.log("Opening remote reactive transaction synchronization channel...");
+    
     db.collection('messages').orderBy('timestamp', 'asc').limitToLast(50)
         .onSnapshot((snapshot) => {
             messagesDiv.innerHTML = '';
@@ -133,7 +150,7 @@ function listenToMessages() {
                 const item = document.createElement('div');
                 item.classList.add('msg');
                 
-                if (data.uid === currentUser.uid) {
+                if (data.author === userNickname) {
                     item.classList.add('my');
                 } else {
                     item.classList.add('other');
@@ -148,7 +165,7 @@ function listenToMessages() {
             });
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }, (error) => {
-            console.error("Dynamic subscription sync broken:", error);
+            console.error("Dynamic reactive sync broken:", error);
         });
 }
 
@@ -161,7 +178,13 @@ function appendSystemMessage(text) {
 }
 
 function logout() { 
-    console.log("Clearing state data token, terminating session...");
-    auth.signOut(); 
+    console.log("Clearing active browser session token data...");
+    localStorage.removeItem('proton_nickname');
+    userNickname = '';
+    showScreen('auth');
+    if (authNicknameInput) authNicknameInput.value = '';
+    if (authPasswordInput) authPasswordInput.value = '';
+    if (loginButton) loginButton.textContent = "Sign In / Register";
 }
+
 input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });

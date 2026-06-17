@@ -7,9 +7,9 @@
         body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; }
         .hidden { display: none !important; }
-        .btn-google { background: #4285F4; color: white; border: none; padding: 14px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px auto 0; width: 100%; font-weight: bold; }
-        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
         .btn-main { background: #007bff; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        .btn-main:hover { background: #0056b3; }
         #chat-screen { width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; }
         #messages { flex: 1; overflow-y: auto; border: 1px solid #eee; padding: 15px; background: #fafafa; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
         .msg { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; }
@@ -18,31 +18,27 @@
         .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
         .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         #form { display: flex; gap: 8px; align-items: center; }
-        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 0; }
         .file-label { background: #6c757d; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 18px; }
         #file-input { display: none; }
+        #error-message { color: #dc3545; font-size: 14px; margin-bottom: 15px; font-weight: bold; text-align: left; }
     </style>
 </head>
 <body>
 
-    <!-- SCREEN 1: LOGIN -->
+    <!-- SCREEN 1: LOGIN & REGISTER -->
     <div id="auth-screen" class="container">
         <h2>Login to Proton 🚀</h2>
-        <p>Welcome back! Please sign in with Google to start chatting.</p>
-        <button id="login-button" class="btn-google" onclick="loginWithGoogle()">
-            Sign in with Google
-        </button>
+        <p>Enter nickname and password. New accounts will be registered automatically.</p>
+        
+        <div id="error-message" class="hidden"></div>
+        
+        <input type="text" id="auth-nickname" placeholder="Enter nickname..." />
+        <input type="password" id="auth-password" placeholder="Enter password..." />
+        <button id="login-button" class="btn-main" onclick="handleAuth()">Sign In / Register</button>
     </div>
 
-    <!-- SCREEN 2: CHOOSE NICKNAME -->
-    <div id="name-screen" class="container hidden">
-        <h2>What is your name? 🤔</h2>
-        <p>Please select a nickname that other users will see in the chat.</p>
-        <input type="text" id="nickname-input" placeholder="Enter your nickname..." />
-        <button class="btn-main" onclick="saveNickname()">Save and Enter</button>
-    </div>
-
-    <!-- SCREEN 3: MAIN CHAT -->
+    <!-- SCREEN 2: MAIN CHAT -->
     <div id="chat-screen" class="container hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="margin: 0;">Proton Chat 💬</h3>
@@ -57,8 +53,7 @@
         </div>
     </div>
 
-    <!-- Unblockable Global Firebase SDK Mirrors -->
-    <script src="https://cloudflare.com"></script>
+    <!-- Global Firebase SDK Libraries -->
     <script src="https://cloudflare.com"></script>
     <script src="https://cloudflare.com"></script>
     
