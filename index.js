@@ -2,48 +2,56 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const WebSocket = require('ws');
-
-// Подключаем нашу текстовую базу данных
-const Datastore = require('nedb-promises');
-const db = Datastore.create({ filename: path.join(__dirname, 'messages.db'), autoload: true });
+const fs = require('fs'); // Встроенный модуль работы с файлами, никогда не сломается!
 
 const app = express();
-
-// Раздаём сайт из папки frontend
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../frontend'))); // Для локальных тестов
+app.use(express.static(__dirname)); // Для работы на хостинге Render
 
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const clients = new Set();
 
-wss.on('connection', async (ws) => {
-    clients.add(ws);
-    console.log('Пользователь успешно подключился к Proton! 🎉');
+const historyFilePath = path.join(__dirname, 'history.json');
 
-    // МАГИЯ: При подключении достаем из базы последние 50 сообщений, сортируем по времени
+// Функция безопасного чтения истории из текстового файла
+function loadHistory() {
     try {
-        const history = await db.find({}).sort({ timestamp: 1 }).limit(50);
-        // Отправляем историю сообщений обратно вошедшему пользователю в виде JSON
-        ws.send(JSON.stringify({ type: 'history', data: history }));
-    } catch (err) {
-        console.error('Ошибка загрузки истории:', err);
+        if (fs.existsSync(historyFilePath)) {
+            const fileData = fs.readFileSync(historyFilePath, 'utf8');
+            return JSON.parse(fileData);
+        }
+    } catch (e) {
+        console.log("Создаем чистую историю...");
     }
+    return [];
+}
 
-    // Ждём сообщение от браузера
-    ws.on('message', async (message) => {
+// Функция сохранения сообщения в текстовый файл
+function saveToHistory(text) {
+    const history = loadHistory();
+    history.push({ text, timestamp: Date.now() });
+    // Оставляем только последние 50 сообщений, чтобы файл не раздувался
+    if (history.length > 50) history.shift();
+    fs.writeFileSync(historyFilePath, JSON.stringify(history, null, 2), 'utf8');
+}
+
+wss.on('connection', (ws) => {
+    clients.add(ws);
+    console.log('Пользователь подключился к Proton! 🎉');
+
+    // При входе сразу отдаем сохраненный текстовый файл истории
+    const history = loadHistory();
+    ws.send(JSON.stringify({ type: 'history', data: history }));
+
+    ws.on('message', (message) => {
         const textMessage = message.toString();
-        console.log('Сервер получил сообщение:', textMessage);
+        console.log('Новое сообщение:', textMessage);
 
-        // Создаем объект сообщения с меткой времени
-        const msgObject = {
-            text: textMessage,
-            timestamp: Date.now()
-        };
-
-        // Сохраняем сообщение в файл базы данных messages.db
-        await db.insert(msgObject);
+        // Сохраняем в наш файл
+        saveToHistory(textMessage);
         
-        // Пересылаем полученное сообщение ВСЕМ, кто сейчас онлайн
+        // Пересылаем всем в сети
         for (let client of clients) {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({ type: 'message', data: textMessage }));
@@ -51,13 +59,8 @@ wss.on('connection', async (ws) => {
         }
     });
 
-    ws.on('close', () => {
-        clients.delete(ws);
-        console.log('Пользователь отключился');
-    });
+    ws.on('close', () => clients.delete(ws));
 });
 
 const PORT = process.env.PORT || 5002;
-server.listen(PORT, () => {
-    console.log(`Сервер Proton запущен на порту ${PORT}`);
-});
+server.listen(PORT, () => console.log(`Proton онлайн на порту ${PORT}`));
