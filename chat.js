@@ -1,4 +1,3 @@
-const IMGBB_API_KEY = 'de55d39e084ff3311f5e986142c52e4f';
 let userNickname = '';
 
 if (!localStorage.getItem('proton_nickname')) {
@@ -9,10 +8,7 @@ if (!localStorage.getItem('proton_nickname')) {
 
 window.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('input');
-    if (input) {
-        input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-    }
-    // Start continuous remote message pooling sync channel
+    if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     fetchHistory();
     setInterval(fetchHistory, 1500);
 });
@@ -29,7 +25,6 @@ function renderMessages(messages) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
     
-    // Check if view update is actually required to save resources
     const currentCount = messagesDiv.children.length;
     if (currentCount === messages.length) return;
 
@@ -71,29 +66,26 @@ async function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
 
-    console.log("Processing image binary stream array payload...");
+    console.log("Transmitting raw file payload to proton local kernel storage area...");
     const formData = new FormData();
-    
-    // CRITICAL FIX: Explicitly targeting the first file file[0] inside the payload
-    formData.append('image', files[0]);
+    formData.append('image', files); // Target specific direct item index safely
 
     try {
-        appendSystemMessage('System status: Uploading picture, please wait...');
-        const response = await fetch(`https://imgbb.com{IMGBB_API_KEY}`, {
+        appendSystemMessage('System status: Uploading picture to local space, wait...');
+        const response = await fetch('/api/upload', {
             method: 'POST',
             body: formData
         });
         const result = await response.json();
         if (result.success) {
-            console.log("Image payload deployed to CDN host:", result.data.url);
-            sendMessage(result.data.url);
-        } else {
-            console.warn("CDN payload rejected:", result);
-            alert('Upload aborted: Hosting service rejected this image format.');
+            console.log("Local cluster image proxy allocation done:", result.url);
+            sendMessage(result.url);
+        } else { 
+            alert('Core system file upload rejected.'); 
         }
-    } catch (e) {
-        console.error("Pipeline uplink upload error:", e);
-        alert('Upload failed: Data network pipeline transfer error.');
+    } catch (e) { 
+        console.error("Local upload stream failure:", e);
+        alert('Upload failed: Internal kernel space transmission error.'); 
     }
 }
 
