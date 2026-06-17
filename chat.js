@@ -62,31 +62,28 @@ async function sendMessage(imageUrl = '') {
     } catch (e) { console.error("Datagram package transmission failed:", e); }
 }
 
-async function uploadImage(inputElement) {
+// IRONCLAD IMAGE TO TEXT (BASE64) STREAMING PIPELINE
+function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
 
-    console.log("Transmitting raw file payload to proton local kernel storage area...");
-    const formData = new FormData();
-    formData.append('image', files); // Target specific direct item index safely
+    const targetFile = files[0];
+    console.log("Converting static media payload array to binary Base64 text string...");
+    appendSystemMessage('System status: Processing picture payload stream...');
 
-    try {
-        appendSystemMessage('System status: Uploading picture to local space, wait...');
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData
-        });
-        const result = await response.json();
-        if (result.success) {
-            console.log("Local cluster image proxy allocation done:", result.url);
-            sendMessage(result.url);
-        } else { 
-            alert('Core system file upload rejected.'); 
-        }
-    } catch (e) { 
-        console.error("Local upload stream failure:", e);
-        alert('Upload failed: Internal kernel space transmission error.'); 
-    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const base64String = e.target.result;
+        console.log("Conversion successful. Transmitting compressed packet data...");
+        sendMessage(base64String); // Sends the clean text representation of the image
+    };
+    reader.onerror = function (error) {
+        console.error("FileReader processing intercept error:", error);
+        alert('Upload failed: File structure streaming conversion error.');
+    };
+    
+    // Reads file and dynamically triggers the encoding mechanism
+    reader.readAsDataURL(targetFile); 
 }
 
 function appendSystemMessage(text) {

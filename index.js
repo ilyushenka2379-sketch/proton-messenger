@@ -2,26 +2,14 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
-const multer = require('multer'); // Modern library for absolute local file uploads
 
 const app = express();
-app.use(express.json());
+// Increasing packet size limit to 10MB so larger stringified images can pass through smoothly
+app.use(express.json({ limit: '10mb' }));
 app.use(express.static(__dirname));
-
-// Create static link distribution channel for uploaded pictures
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-app.use('/uploads', express.static(uploadsDir));
 
 const usersFilePath = path.join(__dirname, 'users.json');
 const historyFilePath = path.join(__dirname, 'history.json');
-
-// Multer storage setup
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadsDir),
-    filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
-const upload = multer({ storage: storage });
 
 function loadData(filePath) {
     try {
@@ -34,14 +22,7 @@ function saveData(filePath, data) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-// 1. LOCAL MULTI-FILE UPLOAD ROUTE
-app.post('/api/upload', upload.single('image'), (req, res) => {
-    if (!req.file) return res.status(400).json({ success: false, error: 'File transfer empty' });
-    const localImageUrl = `/uploads/${req.file.filename}`;
-    res.json({ success: true, url: localImageUrl });
-});
-
-// 2. AUTHENTICATION ROUTE
+// 1. AUTHENTICATION ROUTE
 app.post('/api/auth', (req, res) => {
     const { nickname, password } = req.body;
     if (!nickname || !password) return res.status(400).json({ success: false, error: 'Fields cannot be empty!' });
@@ -59,7 +40,7 @@ app.post('/api/auth', (req, res) => {
     }
 });
 
-// 3. MESSAGES HISTORY ROUTES
+// 2. MESSAGES HISTORY ROUTES (Handles both text and Base64 strings natively)
 app.get('/api/messages', (req, res) => res.json(loadData(historyFilePath)));
 app.post('/api/messages', (req, res) => {
     const { text, imageUrl, author } = req.body;
