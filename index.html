@@ -2,45 +2,74 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Proton Messenger</title>
+    <title>Proton Messenger 2.0</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
-        #chat { max-width: 500px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-top: 15px; }
-        #messages { height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; }
-        .msg { margin-bottom: 8px; padding: 6px 10px; background: #e1f5fe; border-radius: 4px; max-width: 80%; align-self: flex-start; clear: both; }
-        #form { display: flex; }
-        #input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
-        #video-container { max-width: 500px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .videos { display: flex; gap: 10px; }
-        video { background: #222; border-radius: 6px; width: 50%; height: 150px; object-fit: cover; }
+        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; box-sizing: border-box; }
+        .hidden { display: none !important; }
+        
+        /* Экран входа */
+        .btn-google { background: #4285F4; color: white; border: none; padding: 12px 24px; font-size: 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; margin: 20px auto 0; width: 100%; }
+        
+        /* Экран никнейма */
+        input[type="text"] { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; }
+        .btn-main { background: #007bff; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; border-radius: 6px; cursor: pointer; }
+        
+        /* Экран чата */
+        #chat-screen { width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; }
+        #messages { flex: 1; overflow-y: auto; border: 1px solid #eee; padding: 15px; background: #fafafa; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; }
+        .msg.my { background: #007bff; color: white; align-self: flex-end; }
+        .msg.other { background: #e4e6eb; color: black; align-self: flex-start; }
+        .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
+        .msg img { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        
+        #form { display: flex; gap: 8px; align-items: center; }
+        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .file-label { background: #6c757d; color: white; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 18px; }
+        #file-input { display: none; }
     </style>
 </head>
 <body>
 
-    <h2>Messenger Proton 🚀</h2>
-    
-    <!-- Красивый блок для видеозвонка -->
-    <div id="video-container">
-        <div class="videos">
-            <video id="localVideo" autoplay playsinline muted></video>
-            <video id="remoteVideo" autoplay playsinline></video>
-        </div>
-        <div>
-            <button id="callBtn" onclick="startCall()" style="background: #28a745; margin-left: 0;">📞 Позвонить</button>
-            <button id="hangupBtn" onclick="hangUp()" style="background: #dc3545; margin-left: 0; display: none;">🛑 Положить трубку</button>
-        </div>
+    <!-- ЭКРАН 1: АВТОРИЗАЦИЯ -->
+    <div id="auth-screen" class="container">
+        <h2>Вход в Proton 🚀</h2>
+        <p>Добро пожаловать! Войдите через Google, чтобы начать общение.</p>
+        <button class="btn-google" onclick="loginWithGoogle()">
+            <img src="https://google.com" alt="Google" width="20">
+            Войти через Google
+        </button>
     </div>
 
-    <!-- Наш чат -->
-    <div id="chat">
+    <!-- ЭКРАН 2: ВЫБОР ИМЕНИ -->
+    <div id="name-screen" class="container hidden">
+        <h2>Как вас зовут? 🤔</h2>
+        <p>Пожалуйста, выберите имя, которое будут видеть другие пользователи.</p>
+        <input type="text" id="nickname-input" placeholder="Ваше имя или никнейм..." />
+        <button class="btn-main" onclick="saveNickname()">Сохранить и войти</button>
+    </div>
+
+    <!-- ЭКРАН 3: ГЛАВНЫЙ ЧАТ -->
+    <div id="chat-screen" class="container hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Чат Proton 💬</h3>
+            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold;">Выйти</button>
+        </div>
         <div id="messages"></div>
         <div id="form">
-            <input id="input" autocomplete="off" placeholder="Type something..." />
-            <button onclick="sendMessage()">Send Message</button>
+            <label class="file-label" for="file-input">📎</label>
+            <input type="file" id="file-input" accept="image/*" onchange="uploadImage(this)" />
+            <input id="input" autocomplete="off" placeholder="Введите сообщение..." />
+            <button class="btn-main" style="width: auto; padding: 12px 20px;" onclick="sendMessage()">Отправить</button>
         </div>
     </div>
 
+    <!-- Подключаем Firebase скрипты (используем совместимый режим для простоты кода) -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    
     <script src="app.js"></script>
 </body>
 </html>

@@ -1,144 +1,152 @@
+// ВСТАВЬТЕ СЮДА ВАШ КЛЮЧ ИЗ IMGBB ДЛЯ КАРТИНОК:
+const IMGBB_API_KEY = 'de55d39e084ff3311f5e986142c52e4f';
+
+// Конфигурация Firebase со скриншота
+const firebaseConfig = {
+    apiKey: "AIzaSyC-IuRsP6vkYD9_pM9aM4pcEnVHGi16_Ec",
+    authDomain: "://firebaseapp.com",
+    projectId: "proton-e70cd",
+    storageBucket: "proton-e70cd.firebasestorage.app",
+    messagingSenderId: "109624272725",
+    appId: "1:109624272725:web:330f2cef607cdc767871dc"
+};
+
+// Инициализация Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// Элементы экранов
+const authScreen = document.getElementById('auth-screen');
+const nameScreen = document.getElementById('name-screen');
+const chatScreen = document.getElementById('chat-screen');
 const messagesDiv = document.getElementById('messages');
 const input = document.getElementById('input');
+const nicknameInput = document.getElementById('nickname-input');
 
-// 1. НАСТРОЙКА БЕЗОПАСНЫХ СОКЕТОВ ДЛЯ ИНТЕРНЕТА (WSS)
-const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-const socket = new WebSocket(protocol + window.location.host);
+let currentUser = null;
+let userNickname = '';
 
-socket.onopen = () => {
-    console.log('Успешно подключились к серверу Proton напрямую!');
-};
-
-function appendMessage(text) {
-    const item = document.createElement('div');
-    item.classList.add('msg');
-    item.textContent = text;
-    messagesDiv.appendChild(item);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-socket.onmessage = (event) => {
-    try {
-        const parsed = JSON.parse(event.data);
-        if (parsed.type === 'history') {
-            messagesDiv.innerHTML = '';
-            parsed.data.forEach(msg => appendMessage(msg.text));
-            return;
-        } else if (parsed.type === 'message') {
-            appendMessage(parsed.data);
-            return;
-        } else if (parsed.type === 'call-signal') {
-            handleCallSignal(parsed);
-            return;
+// Следим за состоянием пользователя (Вошел/Вышел)
+auth.onAuthStateChanged(async (user) => {
+    if (user) {
+        currentUser = user;
+        // Проверяем, есть ли у пользователя никнейм в базе данных
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        if (userDoc.exists) {
+            userNickname = userDoc.data().nickname;
+            showScreen('chat');
+            listenToMessages();
+        } else {
+            showScreen('name');
         }
-    } catch (e) {
-        appendMessage(event.data);
+    } else {
+        showScreen('auth');
     }
-};
-
-function sendMessage() {
-    if (!input) return;
-    const text = input.value.trim();
-    if (text && socket.readyState === WebSocket.OPEN) {
-        socket.send(text);
-        input.value = '';
-    }
-}
-
-input.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
 });
 
-// --- ЖЕЛЕЗОБЕТОННАЯ ЛОГИКА ВИДЕОЗВОНКОВ ---
-let localStream;
-let peerConnection;
-const localVideo = document.getElementById('localVideo');
-const remoteVideo = document.getElementById('remoteVideo');
-const callBtn = document.getElementById('callBtn');
-const hangupBtn = document.getElementById('hangupBtn');
-
-const rtcConfig = { iceServers: [{ urls: 'stun:://google.com' }] };
-
-function handleCallSignal(message) {
-    if (!peerConnection) setupPeerConnection();
-    if (message.sdp) {
-        peerConnection.setRemoteDescription(new RTCSessionDescription(message.sdp))
-            .then(() => {
-                if (peerConnection.remoteDescription.type === 'offer') {
-                    peerConnection.createAnswer().then(answer => {
-                        peerConnection.setLocalDescription(answer);
-                        socket.send(JSON.stringify({ type: 'call-signal', sdp: answer }));
-                    });
-                }
-            }).catch(e => console.error(e));
-    } else if (message.candidate) {
-        peerConnection.addIceCandidate(new RTCIceCandidate(message.candidate)).catch(e => {});
-    }
+function showScreen(screen) {
+    authScreen.classList.add('hidden');
+    nameScreen.classList.add('hidden');
+    chatScreen.classList.add('hidden');
+    if (screen === 'auth') authScreen.classList.remove('hidden');
+    if (screen === 'name') nameScreen.classList.remove('hidden');
+    if (screen === 'chat') chatScreen.classList.remove('hidden');
 }
 
-function setupPeerConnection() {
-    peerConnection = new RTCPeerConnection(rtcConfig);
-    peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            socket.send(JSON.stringify({ type: 'call-signal', candidate: event.candidate }));
-        }
-    };
-    peerConnection.ontrack = (event) => {
-        if (remoteVideo && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
-        }
-    };
-    if (localStream) {
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-    }
+// 1. ВХОД ЧЕРЕЗ GOOGLE
+function loginWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => alert('Ошибка входа: ' + err.message));
 }
 
-async function startCall() {
-    // Кнопка сброса появляется МОМЕНТАЛЬНО, чтобы интерфейс не зависал
-    if (callBtn) callBtn.style.display = 'none';
-    if (hangupBtn) hangupBtn.style.display = 'inline-block';
-
-    try {
-        // Запрашиваем медиапотоки у смартфона
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (localVideo) localVideo.srcObject = localStream;
-    } catch (err) {
-        console.warn('Камера недоступна, пробуем только микрофон...', err);
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            if (localVideo) localVideo.srcObject = localStream;
-        } catch (err2) {
-            alert('Браузер заблокировал доступ к камере/микрофону! Пожалуйста, нажмите на иконку замочка в адресной строке браузера телефона и разрешите камере работать.');
-            hangUp();
-            return;
-        }
-    }
-
-    setupPeerConnection();
-
-    try {
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.send(JSON.stringify({ type: 'call-signal', sdp: offer }));
-    } catch (e) {
-        console.error(e);
-    }
-}
-
-function hangUp() {
-    if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-    }
-    if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-    }
-    if (localVideo) localVideo.srcObject = null;
-    if (remoteVideo) remoteVideo.srcObject = null;
-    if (callBtn) callBtn.style.display = 'inline-block';
-    if (hangupBtn) hangupBtn.style.display = 'none';
+// 2. СОХРАНЕНИЕ НИКНЕЙМА
+async function saveNickname() {
+    const nick = nicknameInput.value.trim();
+    if (!nick) return alert('Введите имя!');
     
-    // Перезагружаем сокет-соединение для очистки сигналов звонка
-    window.location.reload();
+    await db.collection('users').doc(currentUser.uid).set({ nickname: nick });
+    userNickname = nick;
+    showScreen('chat');
+    listenToMessages();
 }
+
+// 3. ОТПРАВКА СООБЩЕНИЯ
+async function sendMessage(imageUrl = '') {
+    const text = input.value.trim();
+    if (!text && !imageUrl) return;
+
+    await db.collection('messages').add({
+        text: text,
+        imageUrl: imageUrl,
+        author: userNickname,
+        uid: currentUser.uid,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    input.value = '';
+}
+
+// 4. ЗАГРУЗКА КАРТИНКИ ЧЕРЕЗ IMGBB
+async function uploadImage(inputElement) {
+    const file = inputElement.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        appendSystemMessage('Загрузка картинки...');
+        const response = await fetch(`https://imgbb.com{IMGBB_API_KEY}`, {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+        if (result.success) {
+            // Отправляем ссылку на картинку в базу данных чата
+            sendMessage(result.data.url);
+        } else {
+            alert('Ошибка загрузки изображения');
+        }
+    } catch (e) {
+        alert('Сеть занята, попробуйте еще раз');
+    }
+}
+
+// 5. ЖИВАЯ ТРАНСЛЯЦИЯ СООБЩЕНИЙ С ЭКРАНА
+function listenToMessages() {
+    db.collection('messages').orderBy('timestamp', 'asc').limitToLast(50)
+        .onSnapshot((snapshot) => {
+            messagesDiv.innerHTML = '';
+            snapshot.forEach((doc) => {
+                const data = doc.data();
+                const item = document.createElement('div');
+                item.classList.add('msg');
+                
+                // Проверяем, наше сообщение или чужое
+                if (data.uid === currentUser.uid) {
+                    item.classList.add('my');
+                } else {
+                    item.classList.add('other');
+                }
+
+                let content = `<div class="author">${data.author}</div>`;
+                if (data.text) content += `<div>${data.text}</div>`;
+                if (data.imageUrl) content += `<img src="${data.imageUrl}" alt="photo">`;
+                
+                item.innerHTML = content;
+                messagesDiv.appendChild(item);
+            });
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        });
+}
+
+function appendSystemMessage(text) {
+    const item = document.createElement('div');
+    item.style.fontSize = '12px';
+    item.style.color = '#888';
+    item.textContent = text;
+    messagesDiv.appendChild(item);
+}
+
+function logout() { auth.signOut(); }
+input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
