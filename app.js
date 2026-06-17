@@ -62,9 +62,8 @@ function loginWithGoogle() {
     
     const provider = new firebase.auth.GoogleAuthProvider();
     
-    // Using native direct redirect to securely bypass third-party cookie restrictions
     auth.signInWithRedirect(provider).catch(err => {
-        if (loginButton) loginButton.textContent = "Войти через Google";
+        if (loginButton) loginButton.textContent = "Sign in with Google";
         console.error("Identity tunnel registration failed:", err);
         alert('Authentication process error: ' + err.message);
     });
@@ -102,7 +101,7 @@ async function uploadImage(inputElement) {
 
     console.log("Intercepting stream array payload buffer...");
     const formData = new FormData();
-    formData.append('image', files[0]); // Fix: sending strictly first target array element
+    formData.append('image', files[0]); // CRITICAL FIX: sending strictly first target array element
 
     try {
         appendSystemMessage('System status: Uploading picture, please wait...');
