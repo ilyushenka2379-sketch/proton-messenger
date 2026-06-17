@@ -1,7 +1,5 @@
-// ВСТАВЬТЕ СЮДА ВАШ КЛЮЧ ИЗ IMGBB ДЛЯ КАРТИНОК:
 const IMGBB_API_KEY = 'de55d39e084ff3311f5e986142c52e4f';
 
-// Конфигурация Firebase со скриншота
 const firebaseConfig = {
     apiKey: "AIzaSyC-IuRsP6vkYD9_pM9aM4pcEnVHGi16_Ec",
     authDomain: "://firebaseapp.com",
@@ -11,12 +9,10 @@ const firebaseConfig = {
     appId: "1:109624272725:web:330f2cef607cdc767871dc"
 };
 
-// Инициализация Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Элементы экранов
 const authScreen = document.getElementById('auth-screen');
 const nameScreen = document.getElementById('name-screen');
 const chatScreen = document.getElementById('chat-screen');
@@ -27,17 +23,20 @@ const nicknameInput = document.getElementById('nickname-input');
 let currentUser = null;
 let userNickname = '';
 
-// Следим за состоянием пользователя (Вошел/Вышел)
 auth.onAuthStateChanged(async (user) => {
     if (user) {
         currentUser = user;
-        // Проверяем, есть ли у пользователя никнейм в базе данных
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        if (userDoc.exists) {
-            userNickname = userDoc.data().nickname;
-            showScreen('chat');
-            listenToMessages();
-        } else {
+        try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                userNickname = userDoc.data().nickname;
+                showScreen('chat');
+                listenToMessages();
+            } else {
+                showScreen('name');
+            }
+        } catch (error) {
+            console.error("Database error:", error);
             showScreen('name');
         }
     } else {
@@ -54,17 +53,14 @@ function showScreen(screen) {
     if (screen === 'chat') chatScreen.classList.remove('hidden');
 }
 
-// 1. ВХОД ЧЕРЕЗ GOOGLE
 function loginWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    // Используем редирект вместо всплывающего окна
-    auth.signInWithRedirect(provider).catch(err => alert('Ошибка входа: ' + err.message));
+    auth.signInWithRedirect(provider).catch(err => alert('Auth error: ' + err.message));
 }
 
-// 2. СОХРАНЕНИЕ НИКНЕЙМА
 async function saveNickname() {
     const nick = nicknameInput.value.trim();
-    if (!nick) return alert('Type name!');
+    if (!nick) return alert('Please enter a nickname!');
     
     await db.collection('users').doc(currentUser.uid).set({ nickname: nick });
     userNickname = nick;
@@ -72,7 +68,6 @@ async function saveNickname() {
     listenToMessages();
 }
 
-// 3. ОТПРАВКА СООБЩЕНИЯ
 async function sendMessage(imageUrl = '') {
     const text = input.value.trim();
     if (!text && !imageUrl) return;
@@ -87,33 +82,30 @@ async function sendMessage(imageUrl = '') {
     input.value = '';
 }
 
-// 4. ЗАГРУЗКА КАРТИНКИ ЧЕРЕЗ IMGBB
 async function uploadImage(inputElement) {
-    const file = inputElement.files[0];
-    if (!file) return;
+    const files = inputElement.files;
+    if (!files || files.length === 0) return;
 
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append('image', files[0]);
 
     try {
-        appendSystemMessage('Loadung image...');
+        appendSystemMessage('Uploading image...');
         const response = await fetch(`https://imgbb.com{IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
         });
         const result = await response.json();
         if (result.success) {
-            // Отправляем ссылку на картинку в базу данных чата
             sendMessage(result.data.url);
         } else {
-            alert('Loading image error');
+            alert('Upload failed');
         }
     } catch (e) {
-        alert('Server is busy, try later.');
+        alert('Network error, try again');
     }
 }
 
-// 5. ЖИВАЯ ТРАНСЛЯЦИЯ СООБЩЕНИЙ С ЭКРАНА
 function listenToMessages() {
     db.collection('messages').orderBy('timestamp', 'asc').limitToLast(50)
         .onSnapshot((snapshot) => {
@@ -123,7 +115,6 @@ function listenToMessages() {
                 const item = document.createElement('div');
                 item.classList.add('msg');
                 
-                // Проверяем, наше сообщение или чужое
                 if (data.uid === currentUser.uid) {
                     item.classList.add('my');
                 } else {
