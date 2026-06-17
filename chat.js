@@ -75,7 +75,7 @@ async function uploadImage(inputElement) {
     const formData = new FormData();
     
     // CRITICAL FIX: Explicitly targeting the first file file[0] inside the payload
-    formData.append('image', files[0]); 
+    formData.append('image', files[0]);
 
     try {
         appendSystemMessage('System status: Uploading picture, please wait...');
