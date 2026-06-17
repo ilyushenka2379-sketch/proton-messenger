@@ -57,13 +57,14 @@ function showScreen(screen) {
 // 1. ВХОД ЧЕРЕЗ GOOGLE
 function loginWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert('Ошибка входа: ' + err.message));
+    // Используем редирект вместо всплывающего окна
+    auth.signInWithRedirect(provider).catch(err => alert('Ошибка входа: ' + err.message));
 }
 
 // 2. СОХРАНЕНИЕ НИКНЕЙМА
 async function saveNickname() {
     const nick = nicknameInput.value.trim();
-    if (!nick) return alert('Введите имя!');
+    if (!nick) return alert('Type name!');
     
     await db.collection('users').doc(currentUser.uid).set({ nickname: nick });
     userNickname = nick;
@@ -95,7 +96,7 @@ async function uploadImage(inputElement) {
     formData.append('image', file);
 
     try {
-        appendSystemMessage('Загрузка картинки...');
+        appendSystemMessage('Loadung image...');
         const response = await fetch(`https://imgbb.com{IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
@@ -105,10 +106,10 @@ async function uploadImage(inputElement) {
             // Отправляем ссылку на картинку в базу данных чата
             sendMessage(result.data.url);
         } else {
-            alert('Ошибка загрузки изображения');
+            alert('Loading image error');
         }
     } catch (e) {
-        alert('Сеть занята, попробуйте еще раз');
+        alert('Server is busy, try later.');
     }
 }
 

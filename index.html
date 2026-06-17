@@ -34,27 +34,27 @@
 
     <!-- ЭКРАН 1: АВТОРИЗАЦИЯ -->
     <div id="auth-screen" class="container">
-        <h2>Вход в Proton 🚀</h2>
-        <p>Добро пожаловать! Войдите через Google, чтобы начать общение.</p>
+        <h2>Signing/Logining in Proton 🚀</h2>
+        <p>Hi! Please sign/log in with Google to continue.</p>
         <button class="btn-google" onclick="loginWithGoogle()">
             <img src="https://google.com" alt="Google" width="20">
-            Войти через Google
+            Sign/Log in with Google
         </button>
     </div>
 
     <!-- ЭКРАН 2: ВЫБОР ИМЕНИ -->
     <div id="name-screen" class="container hidden">
-        <h2>Как вас зовут? 🤔</h2>
-        <p>Пожалуйста, выберите имя, которое будут видеть другие пользователи.</p>
-        <input type="text" id="nickname-input" placeholder="Ваше имя или никнейм..." />
-        <button class="btn-main" onclick="saveNickname()">Сохранить и войти</button>
+        <h2>What is your name?? 🤔</h2>
+        <p>Please, choose a nickname for other users to see.</p>
+        <input type="text" id="nickname-input" placeholder="Your name or nickname..." />
+        <button class="btn-main" onclick="saveNickname()">Save and go in.</button>
     </div>
 
     <!-- ЭКРАН 3: ГЛАВНЫЙ ЧАТ -->
     <div id="chat-screen" class="container hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <h3 style="margin: 0;">Чат Proton 💬</h3>
-            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold;">Выйти</button>
+            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold;">Leave</button>
         </div>
         <div id="messages"></div>
         <div id="form">
