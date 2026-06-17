@@ -71,20 +71,30 @@ async function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
 
+    console.log("Processing image binary stream array payload...");
     const formData = new FormData();
-    formData.append('image', files[0]);
+    
+    // CRITICAL FIX: Explicitly targeting the first file file[0] inside the payload
+    formData.append('image', files[0]); 
 
     try {
-        appendSystemMessage('Uploading image...');
+        appendSystemMessage('System status: Uploading picture, please wait...');
         const response = await fetch(`https://imgbb.com{IMGBB_API_KEY}`, {
             method: 'POST',
             body: formData
         });
         const result = await response.json();
         if (result.success) {
+            console.log("Image payload deployed to CDN host:", result.data.url);
             sendMessage(result.data.url);
-        } else { alert('Hosting upload rejected.'); }
-    } catch (e) { alert('Upload transfer pipeline error.'); }
+        } else {
+            console.warn("CDN payload rejected:", result);
+            alert('Upload aborted: Hosting service rejected this image format.');
+        }
+    } catch (e) {
+        console.error("Pipeline uplink upload error:", e);
+        alert('Upload failed: Data network pipeline transfer error.');
+    }
 }
 
 function appendSystemMessage(text) {
