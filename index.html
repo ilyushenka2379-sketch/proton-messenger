@@ -1,17 +1,38 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Proton Messenger</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f0f2f5; }
+        #chat { max-width: 500px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-top: 15px; }
+        #messages { height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; margin-bottom: 10px; background: #fafafa; }
+        .msg { margin-bottom: 8px; padding: 6px 10px; background: #e1f5fe; border-radius: 4px; max-width: 80%; align-self: flex-start; clear: both; }
+        #form { display: flex; }
+        #input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+        #video-container { max-width: 500px; background: white; border: 1px solid #ccc; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .videos { display: flex; gap: 10px; }
+        video { background: #222; border-radius: 6px; width: 50%; height: 150px; object-fit: cover; }
+    </style>
+</head>
 <body>
 
     <h2>Messenger Proton 🚀</h2>
     
-    <!-- Блок для видеозвонка -->
-    <div id="video-container" style="margin-bottom: 15px;">
-        <video id="localVideo" autoplay playsinline muted style="width: 120px; background: #333; border-radius: 8px;"></video>
-        <video id="remoteVideo" autoplay playsinline style="width: 250px; background: #222; border-radius: 8px; margin-left: 10px;"></video>
-        <div style="margin-top: 5px;">
-            <button id="callBtn" onclick="startCall()" style="background: #28a745;">📞 Позвонить</button>
-            <button id="hangupBtn" onclick="hangUp()" style="background: #dc3545; display: none;">🛑 Положить трубку</button>
+    <!-- Красивый блок для видеозвонка -->
+    <div id="video-container">
+        <div class="videos">
+            <video id="localVideo" autoplay playsinline muted></video>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+        <div>
+            <button id="callBtn" onclick="startCall()" style="background: #28a745; margin-left: 0;">📞 Позвонить</button>
+            <button id="hangupBtn" onclick="hangUp()" style="background: #dc3545; margin-left: 0; display: none;">🛑 Положить трубку</button>
         </div>
     </div>
 
+    <!-- Наш чат -->
     <div id="chat">
         <div id="messages"></div>
         <div id="form">
@@ -22,3 +43,4 @@
 
     <script src="app.js"></script>
 </body>
+</html>
