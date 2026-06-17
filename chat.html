@@ -29,7 +29,7 @@
         <div id="messages"></div>
         <div id="form">
             <label class="file-label" for="file-input">📎</label>
-            <input type="file" id="file-input" accept="image/*" onchange="uploadImage(this)" />
+            <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
             <input id="input" autocomplete="off" placeholder="Type a message..." />
             <button class="btn-main" onclick="sendMessage()">Send</button>
         </div>
