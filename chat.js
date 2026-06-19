@@ -94,7 +94,7 @@ async function fetchHistory() {
         if (myLastMsg) {
             isCurrentUserPremium = myLastMsg.isPremium;
         } else {
-            if(userNickname.toLowerCase() === 'ilyushenka') isCurrentUserPremium = true;
+            if(userNickname.toLowerCase() === 'GDlyuha103') isCurrentUserPremium = true;
         }
 
         renderMessages(messages);
