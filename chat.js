@@ -1,4 +1,5 @@
 let userNickname = '';
+let isCurrentUserPremium = false; 
 
 if (!localStorage.getItem('proton_nickname')) {
     window.location.href = 'index.html';
@@ -6,17 +7,96 @@ if (!localStorage.getItem('proton_nickname')) {
     userNickname = localStorage.getItem('proton_nickname');
 }
 
+// Lists of available emojis
+const STANDARD_EMOJIS = ['😀', '😂', '🥰', '👍', '🔥', '🎉', '💩', '👀', '💯', '❤️', '🚀', '💻'];
+
+// Array of 7 custom emoji file paths (6 and 7 are jpg, others are png)
+const PREMIUM_EMOJIS_SLOTS = [
+    'emojis/1.png', 'emojis/2.png', 'emojis/3.png', 'emojis/4.png', 
+    'emojis/5.png', 'emojis/6.jpg', 'emojis/7.jpg'
+];
+
 window.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('input');
     if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+    
+    initEmojiPicker();
+
+    // Close picker when clicking outside form elements
+    document.addEventListener('click', (e) => {
+        const picker = document.getElementById('emoji-picker');
+        const emojiBtn = document.querySelector('.emoji-btn');
+        if (picker && picker.classList.contains('active') && !picker.contains(e.target) && e.target !== emojiBtn) {
+            picker.classList.remove('active');
+        }
+    });
+
     fetchHistory();
     setInterval(fetchHistory, 1500);
 });
+
+function initEmojiPicker() {
+    const standardGrid = document.getElementById('standard-emojis');
+    const premiumGrid = document.getElementById('premium-emojis');
+    
+    if (standardGrid) {
+        standardGrid.innerHTML = '';
+        STANDARD_EMOJIS.forEach(emoji => {
+            const span = document.createElement('span');
+            span.className = 'emoji-item';
+            span.textContent = emoji;
+            span.onclick = () => insertEmoji(emoji, false);
+            standardGrid.appendChild(span);
+        });
+    }
+
+    if (premiumGrid) {
+        premiumGrid.innerHTML = '';
+        PREMIUM_EMOJIS_SLOTS.forEach((src, index) => {
+            const img = document.createElement('img');
+            img.className = 'emoji-item premium-slot';
+            img.src = src;
+            img.style.width = '24px';
+            img.style.height = '24px';
+            img.style.objectFit = 'contain';
+            // Inserts text token like [proton_emoji_1] on action click
+            img.onclick = () => insertEmoji(`[proton_emoji_${index + 1}]`, true);
+            premiumGrid.appendChild(img);
+        });
+    }
+}
+
+function toggleEmojiPicker() {
+    const picker = document.getElementById('emoji-picker');
+    if (picker) picker.classList.toggle('active');
+}
+
+function insertEmoji(emoji, isPremiumEmoji) {
+    if (isPremiumEmoji && !isCurrentUserPremium) {
+        alert('🔒 This emoji is exclusive to Proton Premium users!');
+        return;
+    }
+
+    const input = document.getElementById('input');
+    if (input) {
+        input.value += emoji;
+        input.focus();
+    }
+}
 
 async function fetchHistory() {
     try {
         const response = await fetch('/api/messages');
         const messages = await response.json();
+        
+        // Scan latest payload array package from current user to find true sync data flag
+        const myLastMsg = [...messages].reverse().find(m => m.author === userNickname);
+        if (myLastMsg) {
+            isCurrentUserPremium = myLastMsg.isPremium;
+        } else {
+            if(userNickname.toLowerCase() === 'ilyushenka') isCurrentUserPremium = true;
+        }
+
         renderMessages(messages);
     } catch (e) { console.error("Sync data transaction error:", e); }
 }
@@ -34,27 +114,35 @@ function renderMessages(messages) {
         item.classList.add('msg');
         item.classList.add(data.author === userNickname ? 'my' : 'other');
 
-        // --- UPDATED LOGIC FOR PREMIUM CHECK ---
         let authorMarkup = '';
         if (data.isPremium) {
-            // Если пользователь премиум, делаем золотой никнейм и вешаем корону
             authorMarkup = `<div class="author premium-user"><span class="premium-crown">👑</span>${data.author}</div>`;
         } else {
-            // Если обычный пользователь, оставляем стандартный класс
             authorMarkup = `<div class="author">${data.author}</div>`;
         }
         
         let content = authorMarkup;
-        // ----------------------------------------
 
-        if (data.text) content += `<div>${data.text}</div>`;
+        if (data.text) {
+            let textWithImages = data.text;
+            
+            // Loop parses text string tokens to inject visual inline images (supporting 6 and 7 as jpg)
+            for (let i = 1; i <= 7; i++) {
+                const marker = `\\[proton_emoji_${i}\\]`;
+                let extension = 'png';
+                if (i === 6 || i === 7) {
+                    extension = 'jpg';
+                }
+                const imgTag = `<img src="emojis/${i}.${extension}" style="width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin: 0 2px;">`;
+                textWithImages = textWithImages.replace(new RegExp(marker, 'g'), imgTag);
+            }
+            content += `<div>${textWithImages}</div>`;
+        }
         
-        // MULTI-MEDIA PAYLOAD RENDERING COMPONENT
         if (data.imageUrl) {
             if (data.imageUrl.includes('data:video/')) {
                 content += `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
             } else if (data.imageUrl.includes('data:audio/')) {
-                // NEW: Dynamic Audio Player Generation
                 content += `<audio src="${data.imageUrl}" controls style="margin-top: 5px; display: block;"></audio>`;
             } else {
                 content += `<img src="${data.imageUrl}" alt="photo">`;
@@ -81,6 +169,10 @@ async function sendMessage(imageUrl = '') {
             body: JSON.stringify({ text, imageUrl, author: userNickname })
         });
         input.value = '';
+        
+        const picker = document.getElementById('emoji-picker');
+        if (picker) picker.classList.remove('active');
+        
         fetchHistory();
     } catch (e) { console.error("Datagram package transmission failed:", e); }
 }
@@ -106,7 +198,6 @@ function uploadImage(inputElement) {
     reader.readAsDataURL(targetFile); 
 }
 
-// NEW: SECURE VOICE RECORDING CHANNEL LOGIC
 let mediaRecorder;
 let audioChunks = [];
 let isRecording = false;
@@ -115,7 +206,6 @@ async function toggleRecording() {
     const recordButton = document.getElementById('record-button');
     
     if (!isRecording) {
-        // START RECORDING
         audioChunks = [];
         try {
             console.log("Requesting raw secure microphone hardware uplink...");
@@ -132,11 +222,9 @@ async function toggleRecording() {
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     console.log("Audio payload array stringified successfully. Pushing to datagram packet...");
-                    sendMessage(reader.result); // Pushes the sound Base64 string directly into chat pipeline
+                    sendMessage(reader.result);
                 };
                 reader.readAsDataURL(audioBlob);
-                
-                // Disconnect microphone hardware line to preserve resources
                 stream.getTracks().forEach(track => track.stop());
             };
             
@@ -152,7 +240,6 @@ async function toggleRecording() {
             alert('Hardware block: Microphone access denied. Check your mobile browser permissions!');
         }
     } else {
-        // STOP RECORDING
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }

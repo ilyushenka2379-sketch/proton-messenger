@@ -13,25 +13,95 @@
         .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
         .msg img, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .msg audio { max-height: 40px; }
-        #form { display: flex; gap: 6px; align-items: center; width: 100%; box-sizing: border-box; }
+        #form { display: flex; gap: 6px; align-items: center; width: 100%; box-sizing: border-box; position: relative; }
         #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; min-width: 0; }
-        .file-label, .record-btn { background: #6c757d; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
+        .file-label, .record-btn, .emoji-btn { background: #6c757d; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
         .record-btn { background: #28a745; transition: background 0.2s; }
         .record-btn.recording { background: #dc3545; animation: pulse 1s infinite; }
+        .emoji-btn { background: #ffc107; color: #212529; }
         .btn-main { background: #007bff; color: white; border: none; height: 44px; padding: 0 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 
-        /* --- NEW PREMIUM VISUAL STYLES --- */
+        /* --- PREMIUM VISUAL STYLES --- */
         .msg .author.premium-user {
-            color: #d4af37 !important; /* Роскошный золотой цвет */
+            color: #d4af37 !important;
             font-weight: 900;
-            text-shadow: 0 0 3px rgba(212, 175, 55, 0.5); /* Мягкое неоновое свечение */
+            text-shadow: 0 0 3px rgba(212, 175, 55, 0.5);
         }
         .premium-crown {
             margin-right: 4px;
             font-size: 12px;
             vertical-align: middle;
         }
-        /* --------------------------------- */
+
+        /* --- EMOJI PICKER PANEL --- */
+        .emoji-picker {
+            display: none;
+            position: absolute;
+            bottom: 55px;
+            left: 0;
+            width: 280px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 10px;
+            z-index: 100;
+            box-sizing: border-box;
+        }
+        .emoji-picker.active {
+            display: block;
+        }
+        .emoji-section-title {
+            font-size: 12px;
+            font-weight: bold;
+            color: #666;
+            margin: 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 5px;
+            max-height: 120px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+        }
+        .emoji-item {
+            font-size: 20px;
+            text-align: center;
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.1s;
+            user-select: none;
+        }
+        .emoji-item:hover {
+            background: #e9ecef;
+        }
+        /* Styles for premium image emoji slots */
+        .emoji-item.premium-slot {
+            position: relative;
+            background: #fff9e6;
+            border: 1px dashed #ffe0b2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 32px;
+            width: 32px;
+            margin: 0 auto;
+        }
+        .emoji-item.premium-slot::after {
+            content: "🔒";
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            font-size: 9px;
+            z-index: 2;
+        }
+        .emoji-item.premium-slot:hover {
+            background: #fff3cd;
+        }
 
         @keyframes pulse {
             0% { opacity: 1; }
@@ -48,12 +118,29 @@
             <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold; font-size: 16px;">Logout</button>
         </div>
         <div id="messages"></div>
+        
         <div id="form">
+            <!-- EMOJI PICKER DROPDOWN PANEL -->
+            <div id="emoji-picker" class="emoji-picker">
+                <div class="emoji-section-title">Standard</div>
+                <div class="emoji-grid" id="standard-emojis">
+                    <!-- Filled dynamically via JS -->
+                </div>
+                
+                <div class="emoji-section-title" style="color: #b8860b;">👑 Proton Premium (7 Slots)</div>
+                <div class="emoji-grid" id="premium-emojis">
+                    <!-- 7 Premium PNG/JPG slots filled via JS -->
+                </div>
+            </div>
+
             <label class="file-label" for="file-input">📎</label>
             <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
             
-            <!-- NEW VOICE RECORD BUTTON -->
+            <!-- VOICE RECORD BUTTON -->
             <button id="record-button" class="record-btn" onclick="toggleRecording()">🎤</button>
+            
+            <!-- EMOJI PANELS TRIGGER BUTTON -->
+            <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😀</button>
             
             <input id="input" autocomplete="off" placeholder="Type a message..." />
             <button class="btn-main" onclick="sendMessage()">Send</button>
