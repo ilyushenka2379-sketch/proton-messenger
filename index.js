@@ -11,6 +11,12 @@ app.use(express.static(__dirname));
 const usersFilePath = path.join(__dirname, 'users.json');
 const historyFilePath = path.join(__dirname, 'history.json');
 
+// --- СПИСОК ПРЕМИУМ-ПОЛЬЗОВАТЕЛЕЙ (АДМИН-ПАНЕЛЬ) ---
+// Впиши сюда свой точный никнейм в кавычках (регистр не важен).
+// Если хочешь добавить друзей, пиши через запятую, например: ['ТвойНик', 'НикДруга']
+const PREMIUM_NICKNAMES = ['GDlyuha103']; 
+// ----------------------------------------------------
+
 function loadData(filePath) {
     try {
         if (fs.existsSync(filePath)) return JSON.parse(fs.readFileSync(filePath, 'utf8'));
@@ -34,14 +40,35 @@ app.post('/api/auth', (req, res) => {
         if (users[userKey].password === password) return res.json({ success: true, nickname: users[userKey].nickname });
         return res.status(401).json({ success: false, error: 'Incorrect password!' });
     } else {
-        users[userKey] = { nickname, password };
+        // При первой регистрации пользователя создаем для него флаг премиума
+        users[userKey] = { nickname, password, isPremium: false };
         saveData(usersFilePath, users);
         return res.json({ success: true, nickname });
     }
 });
 
 // 2. MESSAGES HISTORY ROUTES (Handles both text and Base64 strings natively)
-app.get('/api/messages', (req, res) => res.json(loadData(historyFilePath)));
+app.get('/api/messages', (req, res) => {
+    const history = loadData(historyFilePath);
+    const users = loadData(usersFilePath);
+
+    // Перед отправкой истории на фронтенд, проверяем каждого автора на наличие премиума
+    const enrichedHistory = history.map(msg => {
+        const userKey = msg.author.toLowerCase();
+        
+        // Проверяем: есть ли ник в списке ручного премиума или стоит ли флаг true в users.json
+        const hasPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
+                             (users[userKey] && users[userKey].isPremium === true);
+
+        return {
+            ...msg,
+            isPremium: hasPremium // Добавляем булево поле для фронтенда chat.js
+        };
+    });
+
+    res.json(enrichedHistory);
+});
+
 app.post('/api/messages', (req, res) => {
     const { text, imageUrl, author } = req.body;
     const history = loadData(historyFilePath);
