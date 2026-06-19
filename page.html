@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Proton — Download & Info</title>
+    <style>
+        /* General styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #f4f7f6;
+            color: #333;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        /* Header */
+        header {
+            background-color: #ffffff;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #0078d4;
+        }
+        /* Hero Section */
+        .hero {
+            max-width: 1200px;
+            margin: 60px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .hero h1 {
+            font-size: 48px;
+            color: #111;
+            margin-bottom: 20px;
+        }
+        .hero p {
+            font-size: 20px;
+            color: #666;
+            max-width: 600px;
+            margin: 0 auto 40px auto;
+        }
+        /* Buttons Container */
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        /* Action Buttons */
+        .btn-download {
+            display: inline-flex;
+            align-items: center;
+            background-color: #0078d4;
+            color: white;
+            padding: 15px 35px;
+            font-size: 18px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 120, 212, 0.4);
+            transition: background 0.2s, transform 0.2s;
+        }
+        .btn-download:hover {
+            background-color: #005a9e;
+            transform: translateY(-2px);
+        }
+        .btn-web {
+            display: inline-flex;
+            align-items: center;
+            background-color: #ffffff;
+            color: #0078d4;
+            border: 2px solid #0078d4;
+            padding: 15px 35px;
+            font-size: 18px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .btn-web:hover {
+            background-color: #f0f7ff;
+            transform: translateY(-2px);
+        }
+        .btn-subtext {
+            display: block;
+            font-size: 12px;
+            color: #888;
+            margin-top: 10px;
+        }
+        /* Features Section */
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 60px auto;
+            padding: 20px;
+        }
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.03);
+            text-align: center;
+        }
+        .feature-card h3 {
+            margin-bottom: 15px;
+            color: #111;
+        }
+
+        /* Interface Screenshots Section */
+        .interface-section {
+            background-color: #ffffff;
+            padding: 80px 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .interface-container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .section-title {
+            font-size: 36px;
+            text-align: center;
+            color: #111;
+            margin-bottom: 10px;
+        }
+        .section-subtitle {
+            font-size: 18px;
+            text-align: center;
+            color: #666;
+            margin-bottom: 60px;
+        }
+        .screenshot-row {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+            margin-bottom: 80px;
+        }
+        .screenshot-row.reversed {
+            flex-direction: row-reverse;
+        }
+        .screenshot-text {
+            flex: 1;
+        }
+        .screenshot-text h3 {
+            font-size: 26px;
+            color: #0078d4;
+            margin-bottom: 15px;
+        }
+        .screenshot-text p {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.7;
+        }
+        .screenshot-image-box {
+            flex: 1.2;
+            text-align: center;
+        }
+        .screenshot-img {
+            max-width: 100%;
+            max-height: 450px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+            transition: transform 0.3s;
+        }
+        .screenshot-img:hover {
+            transform: scale(1.02);
+        }
+
+        /* Footer */
+        footer {
+            background: #243036;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            font-size: 14px;
+        }
+
+        /* Responsive for mobile phones */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 36px; }
+            .screenshot-row, .screenshot-row.reversed {
+                flex-direction: column;
+                gap: 25px;
+                margin-bottom: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">💬 Proton</div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="hero">
+            <h1>Next Generation Messaging</h1>
+            <p>A fast, secure, and intuitive messenger for your daily chats and work, available on desktop and web.</p>
+            
+            <div class="cta-buttons">
+                <div>
+                    <!-- Ссылка на скачивание десктоп версии с твоего GitHub Releases -->
+                    <a href="https://github.com" class="btn-download" download>
+                        Download for Windows
+                    </a>
+                    <span class="btn-subtext">Windows 10 / 11 (64-bit)</span>
+                </div>
+                
+                <div>
+                    <!-- Кнопка ведет обратно на твой index.html (экран логина) -->
+                    <a href="index.html" class="btn-web">
+                        Open Web Version
+                    </a>
+                    <span class="btn-subtext">No installation required</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features">
+            <div class="feature-card">
+                <h3>⚡ Blazing Fast</h3>
+                <p>Instant message and file delivery with zero lag, no matter the distance.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🔒 Privacy First</h3>
+                <p>Reliable encryption keeps your personal data safe from prying eyes.</p>
+            </div>
+            <div class="feature-card">
+                <h3>🎨 Clean Design</h3>
+                <p>No distractions. Just you, your friends, and a beautifully simple interface.</p>
+            </div>
+        </section>
+
+        <!-- Interface Screenshots Showcase -->
+        <section class="interface-section">
+            <div class="interface-container">
+                <h2 class="section-title">Explore Proton Interface</h2>
+                <p class="section-subtitle">Take a closer look at the minimal and functional layouts created for your comfort.</p>
+
+                <!-- First Screenshot (Login Window) -->
+                <div class="screenshot-row">
+                    <div class="screenshot-text">
+                        <h3>Secure onboarding</h3>
+                        <p>Get started in seconds! The Proton onboarding panel offers a seamless, combined Sign-In and Registration interface. All it takes is your nickname and password to jump straight into the workspace.</p>
+                    </div>
+                    <div class="screenshot-image-box">
+                        <!-- Не забудь переименовать первый скриншот (с ракетой) в login.png и положить в репозиторий -->
+                        <img src="login.png" alt="Proton Authentication Interface" class="screenshot-img">
+                    </div>
+                </div>
+
+                <!-- Second Screenshot (Chat Room) -->
+                <div class="screenshot-row reversed">
+                    <div class="screenshot-text">
+                        <h3>Feature-Rich Workspace</h3>
+                        <p>Enjoy an optimized, clutter-free chat screen. Proton comes equipped with a dedicated file attachment engine to send media or documents instantly, alongside integrated microphone support for smooth voice note recording.</p>
+                    </div>
+                    <div class="screenshot-image-box">
+                        <!-- Не забудь переименовать второй скриншот (с чатом) в chat.png и положить в репозиторий -->
+                        <img src="chat.png" alt="Proton Chat Window Layout" class="screenshot-img">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Proton Messenger. All rights reserved.</p>
+    </footer>
+
+</body>
+</html>
