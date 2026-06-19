@@ -34,7 +34,19 @@ function renderMessages(messages) {
         item.classList.add('msg');
         item.classList.add(data.author === userNickname ? 'my' : 'other');
 
-        let content = `<div class="author">${data.author}</div>`;
+        // --- UPDATED LOGIC FOR PREMIUM CHECK ---
+        let authorMarkup = '';
+        if (data.isPremium) {
+            // Если пользователь премиум, делаем золотой никнейм и вешаем корону
+            authorMarkup = `<div class="author premium-user"><span class="premium-crown">👑</span>${data.author}</div>`;
+        } else {
+            // Если обычный пользователь, оставляем стандартный класс
+            authorMarkup = `<div class="author">${data.author}</div>`;
+        }
+        
+        let content = authorMarkup;
+        // ----------------------------------------
+
         if (data.text) content += `<div>${data.text}</div>`;
         
         // MULTI-MEDIA PAYLOAD RENDERING COMPONENT
