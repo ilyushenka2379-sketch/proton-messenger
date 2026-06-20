@@ -237,22 +237,27 @@ async function sendMessage(imageUrl = '') {
     } catch (e) { console.error("Datagram package transmission failed:", e); }
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ФАЙЛОВ (ТЕПЕРЬ ПЕРЕДАЕТ CURRENTCHATID)
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
+    
+    // Берем строго первый файл из массива
     const targetFile = files[0];
     appendSystemMessage('System status: Processing file stream encoding...');
 
     const reader = new FileReader();
-    reader.onload = function (e) { sendMessage(e.target.result); };
-    reader.onerror = function (error) { alert('Upload failed.'); };
+    reader.onload = function (e) { 
+        // Передаем Base64-строку в sendMessage
+        sendMessage(e.target.result); 
+    };
+    reader.onerror = function (error) { 
+        alert('Upload failed.'); 
+    };
     reader.readAsDataURL(targetFile); 
 }
 
-let mediaRecorder;
-let audioChunks = [];
-let isRecording = false;
-
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ МИКРОФОНА (ТЕПЕРЬ ПЕРЕДАЕТ CURRENTCHATID ЧЕРЕЗ SENDMESSAGE)
 async function toggleRecording() {
     const recordButton = document.getElementById('record-button');
     if (!isRecording) {
@@ -264,7 +269,10 @@ async function toggleRecording() {
             mediaRecorder.onstop = () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 const reader = new FileReader();
-                reader.onloadend = () => { sendMessage(reader.result); };
+                reader.onloadend = () => { 
+                    // Передаем Base64-аудио, внутренняя функция sendMessage сама подхватит currentChatId
+                    sendMessage(reader.result); 
+                };
                 reader.readAsDataURL(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
             };
