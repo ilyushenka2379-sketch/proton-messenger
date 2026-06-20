@@ -242,13 +242,12 @@ function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
     
-    // Берем строго первый файл из массива
-    const targetFile = files[0];
+    // БЕРЕМ ИМЕННО ПЕРВЫЙ ФАЙЛ ИЗ МАССИВА ЧЕРЕЗ [0]
+    const targetFile = files[0]; 
     appendSystemMessage('System status: Processing file stream encoding...');
 
     const reader = new FileReader();
     reader.onload = function (e) { 
-        // Передаем Base64-строку в sendMessage
         sendMessage(e.target.result); 
     };
     reader.onerror = function (error) { 
