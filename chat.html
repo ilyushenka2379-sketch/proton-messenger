@@ -4,174 +4,230 @@
     <meta charset="UTF-8">
     <title>Proton - Chat</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .container { background: white; border-radius: 12px; padding: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 600px; height: 90vh; display: flex; flex-direction: column; box-sizing: border-box; }
-        #messages { flex: 1; overflow-y: auto; border: 1px solid #eee; padding: 15px; background: #fafafa; border-radius: 8px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            background: #f0f2f5; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+        }
         
-        /* Smooth fade-in animation for new messages */
-        .msg { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; font-size: 15px; animation: slideUp 0.25s ease-out forwards; opacity: 0; }
-        .msg.my { background: #007bff; color: white; align-self: flex-end; }
-        .msg.other { background: #e4e6eb; color: black; align-self: flex-start; }
+        /* Main Chat Layout Config */
+        .container { 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); 
+            width: 95vw; 
+            max-width: 900px; 
+            height: 90vh; 
+            display: flex; 
+            overflow: hidden; 
+            box-sizing: border-box; 
+        }
+        
+        /* Sidebar (Left Panel) */
+        .sidebar { 
+            width: 250px; 
+            background: #1e293b; 
+            color: white; 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: space-between; 
+            flex-shrink: 0; 
+        }
+        .sidebar-brand { font-size: 20px; font-weight: bold; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .logout-btn { background: none; border: none; color: #f87171; cursor: pointer; font-weight: bold; font-size: 15px; text-align: left; padding: 5px 0; transition: color 0.2s; }
+        .logout-btn:hover { color: #ef4444; }
+
+        /* Messages Zone (Right Window) */
+        .chat-area { 
+            flex: 1; 
+            background: #f5f7fb; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 20px; 
+            box-sizing: border-box; 
+            position: relative; 
+        }
+        
+        /* PC Effects: Custom Thin Scrollbar */
+        #messages::-webkit-scrollbar { width: 6px; }
+        #messages::-webkit-scrollbar-track { background: transparent; }
+        #messages::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        #messages::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        #messages { flex: 1; overflow-y: auto; padding: 10px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        
+        /* Message Clouds Config */
+        .msg { 
+            padding: 10px 14px; 
+            border-radius: 12px; 
+            max-width: 75%; 
+            word-break: break-word; 
+            font-size: 15px; 
+            animation: slideUp 0.25s ease-out forwards; 
+            opacity: 0; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+        }
+        /* My messages alignment */
+        .msg.my { 
+            background: #007bff; 
+            color: white; 
+            align-self: flex-end; 
+            border-bottom-right-radius: 4px; 
+        }
+        /* Other messages alignment */
+        .msg.other { 
+            background: white; 
+            color: #1e293b; 
+            align-self: flex-start; 
+            border-bottom-left-radius: 4px; 
+            border: 1px solid #e2e8f0; 
+        }
         .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; }
         .msg img, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .msg audio { max-height: 40px; }
-        #form { display: flex; gap: 6px; align-items: center; width: 100%; box-sizing: border-box; position: relative; }
         
-        /* Input transitions */
-        #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; min-width: 0; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
-        #input:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15); }
+        /* Input Panel Layout */
+        #form { 
+            display: flex; 
+            gap: 10px; 
+            align-items: center; 
+            width: 100%; 
+            box-sizing: border-box; 
+            position: relative; 
+            background: white; 
+            padding: 8px 14px; 
+            border-radius: 20px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04); 
+        }
+        #input { flex: 1; padding: 8px 4px; border: none; font-size: 16px; min-width: 0; background: transparent; }
+        #input:focus { outline: none; }
         
         /* Hidden native file input */
         #file-input { display: none; }
         
-        /* Classic gray background and click animations for functional buttons */
-        .file-label, .record-btn, .emoji-btn { background: #8a8d91; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; transition: background 0.2s ease, transform 0.1s ease; }
-        .file-label:hover, .record-btn:hover, .emoji-btn:hover { background: #6c757d; }
-        .file-label:active, .record-btn:active, .emoji-btn:active { transform: scale(0.95); }
+        /* Frameless Clean Icons configuration */
+        .file-label, .record-btn, .emoji-btn { 
+            background: transparent; 
+            color: #8a8a8a; 
+            height: 36px; 
+            width: 36px; 
+            border: none; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-sizing: border-box; 
+            flex-shrink: 0; 
+            font-size: 20px; 
+            cursor: pointer; 
+            transition: color 0.2s ease, transform 0.1s ease; 
+            user-select: none; 
+        }
+        .file-label:hover, .record-btn:hover, .emoji-btn:hover { color: #4b5563; }
+        .file-label:active, .record-btn:active, .emoji-btn:active { transform: scale(0.9); }
         
-        /* Recording state pulse remains active */
-        .record-btn.recording { background: #dc3545; animation: pulse 1s infinite; }
-        .record-btn.recording:active { transform: none; }
+        /* Microphone recording state */
+        .record-btn.recording { color: #dc3545; animation: pulse 1s infinite; }
         
-        /* Main send button with animations */
-        .btn-main { background: #007bff; color: white; border: none; height: 44px; padding: 0 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease, transform 0.1s ease; }
+        /* Sleek Button Send */
+        .btn-main { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            height: 36px; 
+            padding: 0 16px; 
+            font-size: 14px; 
+            border-radius: 18px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            flex-shrink: 0; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            transition: background 0.2s ease, transform 0.1s ease; 
+        }
         .btn-main:hover { background: #0056b3; }
         .btn-main:active { transform: scale(0.95); }
 
         /* --- PREMIUM VISUAL STYLES --- */
-        .msg .author.premium-user {
-            color: #d4af37 !important;
-            font-weight: 900;
-            text-shadow: 0 0 3px rgba(212, 175, 55, 0.5);
-        }
-        .premium-crown {
-            margin-right: 4px;
-            font-size: 12px;
-            vertical-align: middle;
-        }
+        .msg .author.premium-user { color: #d4af37 !important; font-weight: 900; text-shadow: 0 0 3px rgba(212, 175, 55, 0.5); }
+        .premium-crown { margin-right: 4px; font-size: 12px; vertical-align: middle; }
 
-        /* --- EMOJI PICKER PANEL --- */
-        .emoji-picker {
-            display: none;
-            position: absolute;
-            bottom: 55px;
-            left: 0;
-            width: 280px;
-            background: white;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            padding: 10px;
-            z-index: 100;
-            box-sizing: border-box;
-            transform: translateY(10px);
-            opacity: 0;
-            transition: transform 0.2s ease, opacity 0.2s ease;
+        /* --- EMOJI PICKER PANEL WITH SMOOTH OPACITY --- */
+        .emoji-picker { 
+            display: none; 
+            position: absolute; 
+            bottom: 65px; 
+            left: 15px; 
+            width: 280px; 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            padding: 10px; 
+            z-index: 100; 
+            box-sizing: border-box; 
+            opacity: 0; 
+            transition: opacity 0.2s ease; 
+            pointer-events: none; 
         }
-        .emoji-picker.active {
-            display: block;
-            transform: translateY(0);
-            opacity: 1;
-        }
-        .emoji-section-title {
-            font-size: 12px;
-            font-weight: bold;
-            color: #666;
-            margin: 5px 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        .emoji-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 5px;
-            max-height: 120px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-        }
-        .emoji-item {
-            font-size: 20px;
-            text-align: center;
-            padding: 4px;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: background 0.1s;
-            user-select: none;
-        }
-        .emoji-item:hover {
-            background: #e9ecef;
-        }
-        /* Styles for premium image emoji slots */
-        .emoji-item.premium-slot {
-            position: relative;
-            background: #fff9e6;
-            border: 1px dashed #ffe0b2;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 32px;
-            width: 32px;
-            margin: 0 auto;
-        }
-        .emoji-item.premium-slot::after {
-            content: "🔒";
-            position: absolute;
-            bottom: -2px;
-            right: -2px;
-            font-size: 9px;
-            z-index: 2;
-        }
-        .emoji-item.premium-slot:hover {
-            background: #fff3cd;
-        }
+        .emoji-picker.active { display: block; opacity: 1; pointer-events: auto; }
+        .emoji-section-title { font-size: 12px; font-weight: bold; color: #64748b; margin: 5px 0; text-transform: uppercase; letter-spacing: 0.5px; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; max-height: 120px; overflow-y: auto; margin-bottom: 10px; }
+        .emoji-item { font-size: 20px; text-align: center; padding: 4px; cursor: pointer; border-radius: 4px; transition: background 0.1s; user-select: none; }
+        .emoji-item:hover { background: #f1f5f9; }
+        
+        .emoji-item.premium-slot { position: relative; background: #fff9e6; border: 1px dashed #ffe0b2; display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; margin: 0 auto; border-radius: 4px; }
+        .emoji-item.premium-slot::after { content: "🔒"; position: absolute; bottom: -2px; right: -2px; font-size: 9px; z-index: 2; }
+        .emoji-item.premium-slot:hover { background: #fff3cd; }
 
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
-        }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(12px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h3 style="margin: 0;">Proton Chat 💬</h3>
-            <button onclick="logout()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-weight:bold; font-size: 16px;">Logout</button>
-        </div>
-        <div id="messages"></div>
-        
-        <div id="form">
-            <!-- EMOJI PICKER DROPDOWN PANEL -->
-            <div id="emoji-picker" class="emoji-picker">
-                <div class="emoji-section-title">Standard</div>
-                <div class="emoji-grid" id="standard-emojis">
-                    <!-- Filled dynamically via JS -->
-                </div>
-                
-                <div class="emoji-section-title" style="color: #b8860b;">👑 Proton Premium (7 Slots)</div>
-                <div class="emoji-grid" id="premium-emojis">
-                    <!-- 7 Premium PNG/JPG slots filled via JS -->
-                </div>
+        <!-- LEFT SIDEBAR PANEL -->
+        <div class="sidebar">
+            <div>
+                <h3 class="sidebar-brand">Proton Chat 💬</h3>
+                <p style="font-size: 13px; color: #94a3b8; margin-top: 5px;">Welcome to the future of messaging.</p>
             </div>
+            <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+        </div>
 
-            <!-- Custom stylish attachment button -->
-            <label class="file-label" for="file-input">📎</label>
-            <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
+        <!-- RIGHT CHAT WINDOW -->
+        <div class="chat-area">
+            <div id="messages"></div>
             
-            <!-- VOICE RECORD BUTTON -->
-            <button id="record-button" class="record-btn" onclick="toggleRecording()">🎤</button>
-            
-            <!-- EMOJI PANELS TRIGGER BUTTON -->
-            <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😀</button>
-            
-            <input id="input" autocomplete="off" placeholder="Type a message..." />
-            <button class="btn-main" onclick="sendMessage()">Send</button>
+            <div id="form">
+                <!-- EMOJI PICKER DROPDOWN PANEL -->
+                <div id="emoji-picker" class="emoji-picker">
+                    <div class="emoji-section-title">Standard</div>
+                    <div class="emoji-grid" id="standard-emojis"></div>
+                    
+                    <div class="emoji-section-title" style="color: #b8860b;">👑 Proton Premium (7 Slots)</div>
+                    <div class="emoji-grid" id="premium-emojis"></div>
+                </div>
+
+                <!-- Custom stylish frameless attachment button -->
+                <label class="file-label" for="file-input">📎</label>
+                <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
+                
+                <!-- Frameless VOICE RECORD BUTTON -->
+                <button id="record-button" class="record-btn" onclick="toggleRecording()">🎤</button>
+                
+                <!-- Frameless EMOJI PANELS TRIGGER BUTTON -->
+                <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😀</button>
+                
+                <input id="input" autocomplete="off" placeholder="Type a message..." />
+                <button class="btn-main" onclick="sendMessage()">Send</button>
+            </div>
         </div>
     </div>
 
