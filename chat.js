@@ -1,5 +1,6 @@
 let userNickname = '';
 let isCurrentUserPremium = false; 
+let currentChatId = 'global'; // Tracks selected active room instance context channel
 
 if (!localStorage.getItem('proton_nickname')) {
     window.location.href = 'index.html';
@@ -7,10 +8,7 @@ if (!localStorage.getItem('proton_nickname')) {
     userNickname = localStorage.getItem('proton_nickname');
 }
 
-// Lists of available emojis
 const STANDARD_EMOJIS = ['😀', '😂', '🥰', '👍', '🔥', '🎉', '💩', '👀', '💯', '❤️', '🚀', '💻'];
-
-// Array of 7 custom emoji file paths (6 and 7 are jpg, others are png)
 const PREMIUM_EMOJIS_SLOTS = [
     'emojis/1.png', 'emojis/2.png', 'emojis/3.png', 'emojis/4.png', 
     'emojis/5.png', 'emojis/6.jpg', 'emojis/7.jpg'
@@ -20,9 +18,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('input');
     if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     
+    // Renders custom client identification string metadata tag context inside layout panel bottom
+    const profileNode = document.getElementById('current-profile-display');
+    if(profileNode) profileNode.textContent = `Logged in as: ${userNickname}`;
+
     initEmojiPicker();
 
-    // Close picker when clicking outside form elements
     document.addEventListener('click', (e) => {
         const picker = document.getElementById('emoji-picker');
         const emojiBtn = document.querySelector('.emoji-btn');
@@ -32,8 +33,65 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     fetchHistory();
+    fetchUsers();
+    
+    // Dynamic refresh cycles loop pipelines setup execution
     setInterval(fetchHistory, 1500);
+    setInterval(fetchUsers, 5000); 
 });
+
+// GENERATES CORRECT PRIVATE ID ORDERED ALPHABETICALLY TO SYNC CHAT PACKETS REGARDLESS OF WHO INITIATES THE EVENT
+function getPrivateChatId(targetUser) {
+    const sorted = [userNickname.toLowerCase(), targetUser.toLowerCase()].sort();
+    return `private_${sorted[0]}_${sorted[1]}`;
+}
+
+// SWITCH ACTIVE ROUTE CHAT INSTANCE PAYLOAD CONTEXT CHANNEL ROUTER
+function switchChat(chatId, displayTitle) {
+    currentChatId = chatId;
+    document.getElementById('chat-header').textContent = chatId === 'global' ? '🌍 Global Chat' : `👤 ${displayTitle}`;
+    
+    // Resets layout items active visual elements tags highlight arrays loops
+    document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active'));
+    
+    if(chatId === 'global') {
+        document.getElementById('room-global').classList.add('active');
+    } else {
+        const targetElement = document.getElementById(`user-room-${displayTitle}`);
+        if(targetElement) targetElement.classList.add('active');
+    }
+    
+    // Flush UI message board completely to load new clean segment buffer instantly without flash overlay
+    const messagesDiv = document.getElementById('messages');
+    if(messagesDiv) messagesDiv.innerHTML = '';
+    
+    fetchHistory();
+}
+
+async function fetchUsers() {
+    try {
+        const response = await fetch('/api/users');
+        const users = await response.json();
+        const container = document.getElementById('users-directory');
+        if(!container) return;
+        
+        container.innerHTML = '';
+        users.forEach(user => {
+            // Protect loop from displaying current user account identity instance inside search explorer directory
+            if(user.nickname.toLowerCase() === userNickname.toLowerCase()) return;
+            
+            const privateId = getPrivateChatId(user.nickname);
+            const item = document.createElement('div');
+            item.className = `room-item ${currentChatId === privateId ? 'active' : ''}`;
+            item.id = `user-room-${user.nickname}`;
+            item.innerHTML = `👤 ${user.nickname}`;
+            
+            // Open direct message pipeline on item click event sequence trigger
+            item.onclick = () => switchChat(privateId, user.nickname);
+            container.appendChild(item);
+        });
+    } catch(e) { console.error("Users sync stream interrupted:", e); }
+}
 
 function initEmojiPicker() {
     const standardGrid = document.getElementById('standard-emojis');
@@ -59,7 +117,6 @@ function initEmojiPicker() {
             img.style.width = '24px';
             img.style.height = '24px';
             img.style.objectFit = 'contain';
-            // Inserts text token like [proton_emoji_1] on action click
             img.onclick = () => insertEmoji(`[proton_emoji_${index + 1}]`, true);
             premiumGrid.appendChild(img);
         });
@@ -76,25 +133,21 @@ function insertEmoji(emoji, isPremiumEmoji) {
         alert('🔒 This emoji is exclusive to Proton Premium users!');
         return;
     }
-
     const input = document.getElementById('input');
-    if (input) {
-        input.value += emoji;
-        input.focus();
-    }
+    if (input) { input.value += emoji; input.focus(); }
 }
 
 async function fetchHistory() {
     try {
-        const response = await fetch('/api/messages');
+        // REQUEST DATA FROM EXPLICIT ROOM SEGMENT KEY Payloads
+        const response = await fetch(`/api/messages?chatId=${currentChatId}`);
         const messages = await response.json();
         
-        // Scan latest payload array package from current user to find true sync data flag
         const myLastMsg = [...messages].reverse().find(m => m.author === userNickname);
         if (myLastMsg) {
             isCurrentUserPremium = myLastMsg.isPremium;
         } else {
-            if(userNickname.toLowerCase() === 'GDlyuha103') isCurrentUserPremium = true;
+            if(userNickname.toLowerCase() === 'gdlyuha103') isCurrentUserPremium = true;
         }
 
         renderMessages(messages);
@@ -116,23 +169,18 @@ function renderMessages(messages) {
 
         let authorMarkup = '';
         if (data.isPremium) {
-            authorMarkup = `<div class="author premium-user"><span class="premium-crown">👑</span>${data.author}</div>`;
+            authorMarkup = `<div class="author premium-user" onclick="openPM('${data.author}')"><span class="premium-crown">👑</span>${data.author}</div>`;
         } else {
-            authorMarkup = `<div class="author">${data.author}</div>`;
+            authorMarkup = `<div class="author" onclick="openPM('${data.author}')">${data.author}</div>`;
         }
         
         let content = authorMarkup;
 
         if (data.text) {
             let textWithImages = data.text;
-            
-            // Loop parses text string tokens to inject visual inline images (supporting 6 and 7 as jpg)
             for (let i = 1; i <= 7; i++) {
                 const marker = `\\[proton_emoji_${i}\\]`;
-                let extension = 'png';
-                if (i === 6 || i === 7) {
-                    extension = 'jpg';
-                }
+                let extension = (i === 6 || i === 7) ? 'jpg' : 'png';
                 const imgTag = `<img src="emojis/${i}.${extension}" style="width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin: 0 2px;">`;
                 textWithImages = textWithImages.replace(new RegExp(marker, 'g'), imgTag);
             }
@@ -155,6 +203,13 @@ function renderMessages(messages) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// HELPER ROUTE TO OPEN PM CONTEXT DIRECTLY VIA INTERFACE CLICK PATH ACTIONS PAYLOAD
+function openPM(targetNickname) {
+    if(targetNickname.toLowerCase() === userNickname.toLowerCase()) return;
+    const privateId = getPrivateChatId(targetNickname);
+    switchChat(privateId, targetNickname);
+}
+
 async function sendMessage(imageUrl = '') {
     const input = document.getElementById('input');
     if (!input) return;
@@ -166,7 +221,12 @@ async function sendMessage(imageUrl = '') {
         await fetch('/api/messages', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, imageUrl, author: userNickname })
+            body: JSON.stringify({ 
+                text, 
+                imageUrl, 
+                author: userNickname,
+                chatId: currentChatId // ATTACHES THE TARGET ROUTE CONTEXT IDENTIFIER CHANNEL PAYLOAD TAG NATIVELY
+            })
         });
         input.value = '';
         
@@ -180,21 +240,12 @@ async function sendMessage(imageUrl = '') {
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
-
     const targetFile = files[0];
-    console.log("Converting static media payload array to binary Base64 text string...");
-    appendSystemMessage('System status: Processing picture payload stream...');
+    appendSystemMessage('System status: Processing file stream encoding...');
 
     const reader = new FileReader();
-    reader.onload = function (e) {
-        console.log("Conversion successful. Transmitting compressed packet data...");
-        sendMessage(e.target.result);
-    };
-    reader.onerror = function (error) {
-        console.error("FileReader processing intercept error:", error);
-        alert('Upload failed: File structure streaming conversion error.');
-    };
-    
+    reader.onload = function (e) { sendMessage(e.target.result); };
+    reader.onerror = function (error) { alert('Upload failed.'); };
     reader.readAsDataURL(targetFile); 
 }
 
@@ -204,64 +255,32 @@ let isRecording = false;
 
 async function toggleRecording() {
     const recordButton = document.getElementById('record-button');
-    
     if (!isRecording) {
         audioChunks = [];
         try {
-            console.log("Requesting raw secure microphone hardware uplink...");
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            
             mediaRecorder = new MediaRecorder(stream);
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) audioChunks.push(event.data);
-            };
-            
+            mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
             mediaRecorder.onstop = () => {
-                console.log("Microphone stream stopped. Encoding raw wave chunks to audio data URL...");
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                 const reader = new FileReader();
-                reader.onloadend = () => {
-                    console.log("Audio payload array stringified successfully. Pushing to datagram packet...");
-                    sendMessage(reader.result);
-                };
+                reader.onloadend = () => { sendMessage(reader.result); };
                 reader.readAsDataURL(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
             };
-            
             mediaRecorder.start();
             isRecording = true;
-            if (recordButton) {
-                recordButton.classList.add('recording');
-                recordButton.textContent = "🛑";
+            if (recordButton) { 
+                recordButton.classList.add('recording'); 
+                recordButton.textContent = "STOP"; 
             }
-            console.log("Voice recording stream pipeline successfully active.");
-        } catch (err) {
-            console.error("Microphone hardware access rejected:", err);
-            alert('Hardware block: Microphone access denied. Check your mobile browser permissions!');
-        }
+        } catch (err) { alert('Hardware block: Microphone access denied.'); }
     } else {
-        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-            mediaRecorder.stop();
-        }
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         isRecording = false;
-        if (recordButton) {
-            recordButton.classList.remove('recording');
-            recordButton.textContent = "🎤";
+        if (recordButton) { 
+            recordButton.classList.remove('recording'); 
+            recordButton.textContent = "REC"; 
         }
     }
-}
-
-function appendSystemMessage(text) {
-    const messagesDiv = document.getElementById('messages');
-    if (!messagesDiv) return;
-    const item = document.createElement('div');
-    item.style.fontSize = '12px';
-    item.style.color = '#888';
-    item.textContent = text;
-    messagesDiv.appendChild(item);
-}
-
-function logout() { 
-    localStorage.removeItem('proton_nickname');
-    window.location.href = 'index.html';
 }
