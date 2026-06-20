@@ -7,11 +7,9 @@
         body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
         .container { background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); width: 95vw; max-width: 900px; height: 90vh; display: flex; overflow: hidden; box-sizing: border-box; }
         
-        /* Sidebar layout with rooms explorer navigation */
         .sidebar { width: 250px; background: #1e293b; color: white; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; box-sizing: border-box; }
         .sidebar-brand { font-size: 20px; font-weight: bold; margin: 0 0 15px 0; }
         
-        /* Interactive rooms navigator elements */
         .rooms-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold; margin: 15px 0 8px 0; letter-spacing: 0.5px; }
         .rooms-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 15px; }
         .room-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: background 0.2s; display: flex; align-items: center; gap: 8px; }
@@ -23,7 +21,6 @@
 
         .chat-area { flex: 1; background: #f5f7fb; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; position: relative; }
         
-        /* Scrollbar configuration specs */
         #messages::-webkit-scrollbar, .rooms-list::-webkit-scrollbar { width: 6px; }
         #messages::-webkit-scrollbar-track, .rooms-list::-webkit-scrollbar-track { background: transparent; }
         #messages::-webkit-scrollbar-thumb, .rooms-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
@@ -49,7 +46,7 @@
         .file-label:hover, .record-btn:hover, .emoji-btn:hover { color: #4b5563; }
         .file-label:active, .record-btn:active, .emoji-btn:active { transform: scale(0.9); }
         
-        .record-btn.recording { color: #dc3545; animation: pulse 1s infinite; }
+        .record-btn.recording { color: #dc3545; animation: pulse 1s infinite; font-weight: bold; font-size: 14px; }
         .btn-main { background: #007bff; color: white; border: none; height: 36px; padding: 0 16px; font-size: 14px; border-radius: 18px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease, transform 0.1s ease; }
         .btn-main:hover { background: #0056b3; }
         .btn-main:active { transform: scale(0.95); }
@@ -75,7 +72,6 @@
 <body>
 
     <div class="container">
-        <!-- LEFT SIDEBAR WITH AUTO CHATS ROUTING -->
         <div class="sidebar">
             <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
                 <h3 class="sidebar-brand">Proton Chat 💬</h3>
@@ -84,20 +80,15 @@
                 <div class="room-item active" id="room-global" onclick="switchChat('global', 'Global Chat')">🌍 Global Chat</div>
                 
                 <div class="rooms-title">Direct Messages</div>
-                <div class="rooms-list" id="users-directory">
-                    <!-- Loaded dynamically via JS pipeline -->
-                </div>
+                <div class="rooms-list" id="users-directory"></div>
             </div>
             <div>
                 <div id="current-profile-display" style="font-size: 12px; color: #94a3b8; margin-bottom: 10px; font-weight: bold; border-top: 1px solid #334155; padding-top: 10px;"></div>
-                <!-- ЗАМЕНИ ЭТУ СТРОКУ В CHAT.HTML: -->
-                <button class="logout-btn" onclick="logout()">Logout</button>
+                <button class="logout-btn" onclick="logout()">🚪 Logout</button>
             </div>
         </div>
 
-        <!-- RIGHT CHAT AREA -->
         <div class="chat-area">
-            <!-- Dynamic context target title channel header -->
             <div id="chat-header" style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #1e293b; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;">🌍 Global Chat</div>
             
             <div id="messages"></div>
@@ -106,7 +97,6 @@
                 <div id="emoji-picker" class="emoji-picker">
                     <div class="emoji-section-title">Standard</div>
                     <div class="emoji-grid" id="standard-emojis"></div>
-                    
                     <div class="emoji-section-title" style="color: #b8860b;">👑 Proton Premium (7 Slots)</div>
                     <div class="emoji-grid" id="premium-emojis"></div>
                 </div>
@@ -114,7 +104,6 @@
                 <label class="file-label" for="file-input">📎</label>
                 <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
                 
-                <!-- Замени старую кнопку на эту (с текстом REC вместо смайлика) -->
                 <button id="record-button" class="record-btn" onclick="toggleRecording()">REC</button>
                 <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😀</button>
                 

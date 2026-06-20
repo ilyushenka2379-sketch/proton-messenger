@@ -1,6 +1,6 @@
 let userNickname = '';
 let isCurrentUserPremium = false; 
-let currentChatId = 'global'; // Tracks selected active room instance context channel
+let currentChatId = 'global'; 
 
 if (!localStorage.getItem('proton_nickname')) {
     window.location.href = 'index.html';
@@ -18,7 +18,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('input');
     if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     
-    // Renders custom client identification string metadata tag context inside layout panel bottom
     const profileNode = document.getElementById('current-profile-display');
     if(profileNode) profileNode.textContent = `Logged in as: ${userNickname}`;
 
@@ -35,23 +34,19 @@ window.addEventListener('DOMContentLoaded', () => {
     fetchHistory();
     fetchUsers();
     
-    // Dynamic refresh cycles loop pipelines setup execution
     setInterval(fetchHistory, 1500);
     setInterval(fetchUsers, 5000); 
 });
 
-// GENERATES CORRECT PRIVATE ID ORDERED ALPHABETICALLY TO SYNC CHAT PACKETS REGARDLESS OF WHO INITIATES THE EVENT
 function getPrivateChatId(targetUser) {
     const sorted = [userNickname.toLowerCase(), targetUser.toLowerCase()].sort();
     return `private_${sorted[0]}_${sorted[1]}`;
 }
 
-// SWITCH ACTIVE ROUTE CHAT INSTANCE PAYLOAD CONTEXT CHANNEL ROUTER
 function switchChat(chatId, displayTitle) {
     currentChatId = chatId;
     document.getElementById('chat-header').textContent = chatId === 'global' ? '🌍 Global Chat' : `👤 ${displayTitle}`;
     
-    // Resets layout items active visual elements tags highlight arrays loops
     document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active'));
     
     if(chatId === 'global') {
@@ -61,7 +56,6 @@ function switchChat(chatId, displayTitle) {
         if(targetElement) targetElement.classList.add('active');
     }
     
-    // Flush UI message board completely to load new clean segment buffer instantly without flash overlay
     const messagesDiv = document.getElementById('messages');
     if(messagesDiv) messagesDiv.innerHTML = '';
     
@@ -77,7 +71,6 @@ async function fetchUsers() {
         
         container.innerHTML = '';
         users.forEach(user => {
-            // Protect loop from displaying current user account identity instance inside search explorer directory
             if(user.nickname.toLowerCase() === userNickname.toLowerCase()) return;
             
             const privateId = getPrivateChatId(user.nickname);
@@ -86,7 +79,6 @@ async function fetchUsers() {
             item.id = `user-room-${user.nickname}`;
             item.innerHTML = `👤 ${user.nickname}`;
             
-            // Open direct message pipeline on item click event sequence trigger
             item.onclick = () => switchChat(privateId, user.nickname);
             container.appendChild(item);
         });
@@ -139,7 +131,6 @@ function insertEmoji(emoji, isPremiumEmoji) {
 
 async function fetchHistory() {
     try {
-        // REQUEST DATA FROM EXPLICIT ROOM SEGMENT KEY Payloads
         const response = await fetch(`/api/messages?chatId=${currentChatId}`);
         const messages = await response.json();
         
@@ -203,7 +194,6 @@ function renderMessages(messages) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-// HELPER ROUTE TO OPEN PM CONTEXT DIRECTLY VIA INTERFACE CLICK PATH ACTIONS PAYLOAD
 function openPM(targetNickname) {
     if(targetNickname.toLowerCase() === userNickname.toLowerCase()) return;
     const privateId = getPrivateChatId(targetNickname);
@@ -225,7 +215,7 @@ async function sendMessage(imageUrl = '') {
                 text, 
                 imageUrl, 
                 author: userNickname,
-                chatId: currentChatId // ATTACHES THE TARGET ROUTE CONTEXT IDENTIFIER CHANNEL PAYLOAD TAG NATIVELY
+                chatId: currentChatId 
             })
         });
         input.value = '';
@@ -237,28 +227,24 @@ async function sendMessage(imageUrl = '') {
     } catch (e) { console.error("Datagram package transmission failed:", e); }
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ЗАГРУЗКИ ФАЙЛОВ (ТЕПЕРЬ ПЕРЕДАЕТ CURRENTCHATID)
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
-    
-    // БЕРЕМ ИМЕННО ПЕРВЫЙ ФАЙЛ ИЗ МАССИВА ЧЕРЕЗ [0]
     const targetFile = files[0]; 
     appendSystemMessage('System status: Processing file stream encoding...');
 
     const reader = new FileReader();
-    reader.onload = function (e) { 
-        sendMessage(e.target.result); 
-    };
-    reader.onerror = function (error) { 
-        alert('Upload failed.'); 
-    };
+    reader.onload = function (e) { sendMessage(e.target.result); };
+    reader.onerror = function (error) { alert('Upload failed.'); };
     reader.readAsDataURL(targetFile); 
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ МИКРОФОНА (ТЕПЕРЬ ПЕРЕДАЕТ CURRENTCHATID ЧЕРЕЗ SENDMESSAGE)
+let mediaRecorder;
+let audioChunks = [];
+let isRecording = false;
+
 async function toggleRecording() {
-    const recordButton = document.getElementById('record-button');
+    const btn = document.getElementById('record-button');
     if (!isRecording) {
         audioChunks = [];
         try {
@@ -266,28 +252,18 @@ async function toggleRecording() {
             mediaRecorder = new MediaRecorder(stream);
             mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
             mediaRecorder.onstop = () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.onloadend = () => { 
-                    // Передаем Base64-аудио, внутренняя функция sendMessage сама подхватит currentChatId
-                    sendMessage(reader.result); 
-                };
-                reader.readAsDataURL(audioBlob);
-                stream.getTracks().forEach(track => track.stop());
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const r = new FileReader();
+                r.onloadend = () => sendMessage(r.result);
+                r.readAsDataURL(blob);
+                stream.getTracks().forEach(t => t.stop());
             };
-            mediaRecorder.start();
-            isRecording = true;
-            if (recordButton) { 
-                recordButton.classList.add('recording'); 
-                recordButton.textContent = "STOP"; 
-            }
-        } catch (err) { alert('Hardware block: Microphone access denied.'); }
+            mediaRecorder.start(); isRecording = true;
+            if (btn) { btn.classList.add('recording'); btn.textContent = "STOP"; }
+        } catch (err) { alert('Microphone access denied.'); }
     } else {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         isRecording = false;
-        if (recordButton) { 
-            recordButton.classList.remove('recording'); 
-            recordButton.textContent = "REC"; 
-        }
+        if (btn) { btn.classList.remove('recording'); btn.textContent = "REC"; }
     }
 }
