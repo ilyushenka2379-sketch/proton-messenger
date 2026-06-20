@@ -19,11 +19,15 @@
         /* Hidden native file input */
         #file-input { display: none; }
         
-        .file-label, .record-btn, .emoji-btn { background: #6c757d; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
-        .record-btn { background: #28a745; transition: background 0.2s; }
+        /* Unified dark gray background for functional buttons */
+        .file-label, .record-btn, .emoji-btn { background: #495057; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; transition: background 0.2s; }
+        .file-label:hover, .record-btn:hover, .emoji-btn:hover { background: #343a40; }
+        
+        /* Recording state pulse remains active */
         .record-btn.recording { background: #dc3545; animation: pulse 1s infinite; }
-        .emoji-btn { background: #ffc107; color: #212529; }
+        
         .btn-main { background: #007bff; color: white; border: none; height: 44px; padding: 0 20px; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .btn-main:hover { background: #0056b3; }
 
         /* --- PREMIUM VISUAL STYLES --- */
         .msg .author.premium-user {
