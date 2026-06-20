@@ -11,19 +11,26 @@
         .btn-main { background: #007bff; color: white; border: none; padding: 12px; width: 100%; font-size: 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-main:hover { background: #0056b3; }
         #error-message { color: #dc3545; font-size: 14px; margin-bottom: 15px; font-weight: bold; text-align: left; }
+        .toggle-auth { margin-top: 15px; font-size: 14px; color: #555; }
+        .toggle-auth span { color: #007bff; cursor: pointer; font-weight: bold; text-decoration: underline; }
+        .toggle-auth span:hover { color: #0056b3; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Login to Proton 🚀</h2>
-        <p>Enter nickname and password to start chatting.</p>
+        <h2 id="auth-title">Login to Proton 🚀</h2>
+        <p id="auth-subtitle">Enter nickname and password to start chatting.</p>
         
         <div id="error-message" class="hidden"></div>
         
         <input type="text" id="auth-nickname" placeholder="Enter nickname..." />
         <input type="password" id="auth-password" placeholder="Enter password..." />
-        <button id="login-button" class="btn-main" onclick="handleAuth()">Sign In / Register</button>
+        <button id="login-button" class="btn-main" onclick="handleAuth()">Sign In</button>
+
+        <div class="toggle-auth" id="toggle-container">
+            Don't have an account? <span onclick="toggleAuthMode()">Register</span>
+        </div>
     </div>
 
     <script src="auth.js"></script>

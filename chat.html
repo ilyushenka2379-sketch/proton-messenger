@@ -15,6 +15,10 @@
         .msg audio { max-height: 40px; }
         #form { display: flex; gap: 6px; align-items: center; width: 100%; box-sizing: border-box; position: relative; }
         #input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; min-width: 0; }
+        
+        /* Hidden native file input */
+        #file-input { display: none; }
+        
         .file-label, .record-btn, .emoji-btn { background: #6c757d; color: white; height: 44px; width: 44px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; }
         .record-btn { background: #28a745; transition: background 0.2s; }
         .record-btn.recording { background: #dc3545; animation: pulse 1s infinite; }
@@ -133,6 +137,7 @@
                 </div>
             </div>
 
+            <!-- Custom stylish attachment button -->
             <label class="file-label" for="file-input">📎</label>
             <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
             

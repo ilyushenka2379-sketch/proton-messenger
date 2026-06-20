@@ -3,6 +3,31 @@ if (localStorage.getItem('proton_nickname')) {
     window.location.href = 'chat.html';
 }
 
+let isRegisterMode = false;
+
+function toggleAuthMode() {
+    isRegisterMode = !isRegisterMode;
+    const title = document.getElementById('auth-title');
+    const subtitle = document.getElementById('auth-subtitle');
+    const button = document.getElementById('login-button');
+    const toggleContainer = document.getElementById('toggle-container');
+    const errorMessage = document.getElementById('error-message');
+
+    if (errorMessage) errorMessage.classList.add('hidden');
+
+    if (isRegisterMode) {
+        title.textContent = "Create Proton Account ✨";
+        subtitle.textContent = "Choose a nickname and password to register.";
+        button.textContent = "Register";
+        toggleContainer.innerHTML = 'Already have an account? <span onclick="toggleAuthMode()">Sign In</span>';
+    } else {
+        title.textContent = "Login to Proton 🚀";
+        subtitle.textContent = "Enter nickname and password to start chatting.";
+        button.textContent = "Sign In";
+        toggleContainer.innerHTML = 'Don\'t have an account? <span onclick="toggleAuthMode()">Register</span>';
+    }
+}
+
 async function handleAuth() {
     const authNicknameInput = document.getElementById('auth-nickname');
     const authPasswordInput = document.getElementById('auth-password');
@@ -19,7 +44,9 @@ async function handleAuth() {
         return;
     }
 
-    if (loginButton) loginButton.textContent = "Processing authorization...";
+    if (loginButton) {
+        loginButton.textContent = isRegisterMode ? "Processing registration..." : "Processing authorization...";
+    }
     if (errorMessage) errorMessage.classList.add('hidden');
 
     try {
@@ -47,7 +74,9 @@ async function handleAuth() {
 }
 
 function showError(errorElement, buttonElement, text) {
-    if (buttonElement) buttonElement.textContent = "Sign In / Register";
+    if (buttonElement) {
+        buttonElement.textContent = isRegisterMode ? "Register" : "Sign In";
+    }
     if (errorElement) {
         errorElement.textContent = text;
         errorElement.classList.remove('hidden');
