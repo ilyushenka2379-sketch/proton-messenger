@@ -5,7 +5,7 @@ const fs = require('fs');
 
 const app = express();
 // Increasing packet size limit to 10MB so larger stringified images can pass through smoothly
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
 const usersFilePath = path.join(__dirname, 'users.json');
