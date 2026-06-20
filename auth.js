@@ -54,7 +54,7 @@ async function handleAuth() {
         const response = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname, password })
+            body: JSON.stringify({ nickname, password, isRegisterMode }) // <-- ОТПРАВЛЯЕМ РЕЖИМ НА СЕРВЕР
         });
         
         const result = await response.json();

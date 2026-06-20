@@ -28,19 +28,31 @@ function saveData(filePath, data) {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
-// 1. AUTHENTICATION ROUTE
+// 1. AUTHENTICATION ROUTE (С разделением режимов Входа и Регистрации)
 app.post('/api/auth', (req, res) => {
-    const { nickname, password } = req.body;
+    const { nickname, password, isRegisterMode } = req.body; 
     if (!nickname || !password) return res.status(400).json({ success: false, error: 'Fields cannot be empty!' });
 
     const users = loadData(usersFilePath);
     const userKey = nickname.toLowerCase();
 
     if (users[userKey]) {
-        if (users[userKey].password === password) return res.json({ success: true, nickname: users[userKey].nickname });
+        // Если пользователь существует, но пытается зарегистрироваться заново
+        if (isRegisterMode) {
+            return res.status(400).json({ success: false, error: 'This nickname is already taken!' });
+        }
+        // Если это обычный вход, проверяем пароль
+        if (users[userKey].password === password) {
+            return res.json({ success: true, nickname: users[userKey].nickname });
+        }
         return res.status(401).json({ success: false, error: 'Incorrect password!' });
     } else {
-        // При первой регистрации пользователя создаем для него флаг премиума
+        // Если пользователя нет, и он пытается войти через Sign In
+        if (!isRegisterMode) {
+            return res.status(404).json({ success: false, error: 'User not found! Click "Register" below to create an account.' });
+        }
+        
+        // Если пользователя нет, и он нажал Register — создаем новый аккаунт
         users[userKey] = { nickname, password, isPremium: false };
         saveData(usersFilePath, users);
         return res.json({ success: true, nickname });
