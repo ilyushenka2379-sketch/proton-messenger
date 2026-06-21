@@ -16,16 +16,29 @@ const PREMIUM_EMOJIS_SLOTS = [
 ];
 
 window.addEventListener('DOMContentLoaded', () => {
+    // МГНОВЕННО ПРИМЕНЯЕМ ТЕМУ ИЗ ПАМЯТИ ДО ЗАПРОСА К СЕРВЕРУ
+    const savedTheme = localStorage.getItem('proton_theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+
     const input = document.getElementById('input');
     if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     
+    const profileNode = document.getElementById('current-profile-display');
+    if(profileNode) {
+        const savedAvatar = localStorage.getItem('proton_avatar') || 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
+        profileNode.innerHTML = `
+            <span class="avatar-circle" style="background-image: url('${savedAvatar}')"></span>
+            <span>${userNickname}</span>
+        `;
+    }
+
     initEmojiPicker();
     fetchHistory();
     fetchUsers();
     
     setInterval(fetchHistory, 1500);
     setInterval(fetchUsers, 3000);
-    setInterval(sendHeartbeat, 3000); 
+    setInterval(sendHeartbeat, 3000);
 
     document.addEventListener('click', (e) => {
         const picker = document.getElementById('emoji-picker');
@@ -132,18 +145,49 @@ function initEmojiPicker() {
 function toggleEmojiPicker() { const p = document.getElementById('emoji-picker'); if (p) p.classList.toggle('active'); }
 function insertEmoji(e, p) { if (p && !isCurrentUserPremium) { alert('Premium Only!'); return; } const i = document.getElementById('input'); if (i) { i.value += e; i.focus(); } }
 
-async function fetchHistory() {
+async function fetchUsers() {
     try {
-        const response = await fetch(`/api/messages?chatId=${currentChatId}`);
-        const messages = await response.json();
-        const myLastMsg = [...messages].reverse().find(m => m.author === userNickname);
-        if (myLastMsg) {
-            isCurrentUserPremium = myLastMsg.isPremium;
-        } else {
-            if(userNickname.toLowerCase() === 'gdlyuha103') isCurrentUserPremium = true;
+        const response = await fetch('/api/users');
+        globalUsersCache = await response.json();
+        
+        const container = document.getElementById('users-directory');
+        if(!container) return;
+        
+        const me = globalUsersCache.find(u => u.nickname.toLowerCase() === userNickname.toLowerCase());
+        if (me) {
+            // Синхронизируем серверные настройки с локальной памятью
+            document.documentElement.setAttribute('data-theme', me.theme || 'light');
+            document.getElementById('theme-selector').value = me.theme || 'light';
+            localStorage.setItem('proton_theme', me.theme || 'light');
+            if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
+            
+            const avatarUrl = me.avatar ? me.avatar : 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
+            document.getElementById('current-profile-display').innerHTML = `
+                <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
+                <span>${userNickname}</span>
+            `;
         }
-        renderMessages(messages);
-    } catch (e) { console.error("Sync data transaction error:", e); }
+        
+        container.innerHTML = '';
+        globalUsersCache.forEach(user => {
+            if(user.nickname.toLowerCase() === userNickname.toLowerCase()) return;
+            
+            const privateId = getPrivateChatId(user.nickname);
+            const item = document.createElement('div');
+            item.className = `room-item ${currentChatId === privateId ? 'active' : ''}`;
+            item.id = `user-room-${user.nickname}`;
+            
+            const userAvatar = user.avatar ? user.avatar : 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
+            const statusClass = user.isOnline ? 'online' : '';
+            
+            item.innerHTML = `
+                <span class="avatar-circle" style="background-image: url('${userAvatar}')" onclick="openProfileCard('${user.nickname}', event)"></span>
+                <span onclick="switchChat('${privateId}', '${user.nickname}')">${user.nickname}</span>
+                <span class="status-dot ${statusClass}"></span>
+            `;
+            container.appendChild(item);
+        });
+    } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
 
 function renderMessages(messages) {
