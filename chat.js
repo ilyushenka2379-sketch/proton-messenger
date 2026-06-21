@@ -2,6 +2,7 @@ let userNickname = '';
 let isCurrentUserPremium = false; 
 let currentChatId = 'global'; 
 let globalUsersCache = []; 
+let socket; // Переменная для нашего сокет-соединения
 
 if (!localStorage.getItem('proton_nickname')) {
     window.location.href = 'index.html';
@@ -22,22 +23,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const input = document.getElementById('input');
     if (input) input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     
-    const profileNode = document.getElementById('current-profile-display');
-    if(profileNode) {
-        const savedAvatar = localStorage.getItem('proton_avatar') || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        profileNode.innerHTML = `
-            <span class="avatar-circle" style="background-image: url('${savedAvatar}')"></span>
-            <span>${userNickname}</span>
-        `;
-    }
-
     initEmojiPicker();
-    fetchHistory();
-    fetchUsers();
-    
-    setInterval(fetchHistory, 1500);
-    setInterval(fetchUsers, 3000);
-    setInterval(sendHeartbeat, 3000);
+    initWebSocket(); // Запускаем туннель сокетов
 
     document.addEventListener('click', (e) => {
         const picker = document.getElementById('emoji-picker');
@@ -48,14 +35,49 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-async function sendHeartbeat() {
-    try {
-        await fetch('/api/heartbeat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname: userNickname })
-        });
-    } catch(e) {}
+// ИНИЦИАЛИЗАЦИЯ ТУННЕЛЯ WEBSOCKET
+function initWebSocket() {
+    // Автоматически определяет протокол (ws:// или wss:// для хостинга)
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    socket = new WebSocket(`${protocol}//${window.location.host}`);
+
+    socket.onopen = () => {
+        console.log("WebSocket tunnel active.");
+        // Регистрируем никнейм на сервере через сокет
+        socket.send(JSON.stringify({ type: 'register', nickname: userNickname }));
+        
+        // Первично подгружаем список комнат и историю по HTTP
+        fetchUsers();
+        fetchHistory();
+
+        // Запускаем тихий сокет-heartbeat раз в 3 секунды
+        setInterval(() => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({ type: 'heartbeat' }));
+            }
+        }, 3000);
+    };
+
+    socket.onmessage = (event) => {
+        const packet = JSON.parse(event.data);
+        
+        // Сервер говорит, что кто-то зашел/вышел/сменил аву — обновляем панель
+        if (packet.type === 'users_updated') {
+            fetchUsers();
+        }
+        
+        // Прилетело новое сообщение — мгновенно рендерим его, если открыт этот чат!
+        if (packet.type === 'new_message') {
+            if (packet.message.chatId === currentChatId) {
+                appendSingleMessage(packet.message);
+            }
+        }
+    };
+
+    socket.onclose = () => {
+        console.warn("Socket disconnected. Reconnecting in 3s...");
+        setTimeout(initWebSocket, 3000); // Авто-переподключение при сбое сети
+    };
 }
 
 function getPrivateChatId(targetUser) {
@@ -77,7 +99,7 @@ function switchChat(chatId, displayTitle) {
     
     const messagesDiv = document.getElementById('messages');
     if(messagesDiv) messagesDiv.innerHTML = '';
-    fetchHistory();
+    fetchHistory(); // Подгружаем историю выбранной комнаты
 }
 
 async function fetchUsers() {
@@ -94,10 +116,9 @@ async function fetchUsers() {
             localStorage.setItem('proton_theme', me.theme || 'light');
             if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
             
-            // ИСПРАВЛЕНО: Берем твою аватарку из localStorage, чтобы внизу панели всегда был Валерьяныч
-            const myAvatar = localStorage.getItem('proton_avatar') || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            const avatarUrl = me.avatar ? me.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             document.getElementById('current-profile-display').innerHTML = `
-                <span class="avatar-circle" style="background-image: url('${myAvatar}')"></span>
+                <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
                 <span>${userNickname}</span>
             `;
         }
@@ -125,7 +146,6 @@ async function fetchUsers() {
         document.querySelectorAll('.msg').forEach(msgNode => {
             const authorNode = msgNode.querySelector('.author');
             if (!authorNode) return;
-            
             const rawAuthor = authorNode.getAttribute('data-author-name');
             if (!rawAuthor) return;
             
@@ -138,7 +158,6 @@ async function fetchUsers() {
                 }
             }
         });
-
     } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
 
@@ -175,134 +194,119 @@ async function fetchHistory() {
         } else {
             if(userNickname.toLowerCase() === 'gdlyuha103') isCurrentUserPremium = true;
         }
-        renderMessages(messages);
-    } catch (e) { console.error("Sync data transaction error:", e); }
+        renderFullHistory(messages);
+    } catch (e) { console.error("History HTTP sync error:", e); }
 }
 
-function renderMessages(messages) {
+function renderFullHistory(messages) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
-    const currentCount = messagesDiv.children.length;
-    if (currentCount === messages.length) return;
-
     messagesDiv.innerHTML = '';
-    messages.forEach((data) => {
-        const item = document.createElement('div');
-        item.classList.add('msg');
-        item.classList.add(data.author === userNickname ? 'my' : 'other');
-
-        let authorMarkup = '';
-        if (data.isPremium) {
-            authorMarkup = `<div class="author premium-user" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
-        } else {
-            authorMarkup = `<div class="author" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
-        }
-
-        const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
-        const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        let avi = fallback;
-        let extraStyle = 'background-color: #64748b;'; 
-
-        if (data.author === userNickname) {
-            const myLocalAvatar = localStorage.getItem('proton_avatar');
-            if (myLocalAvatar) { avi = myLocalAvatar; extraStyle = 'background-color: transparent;'; }
-        } else if (cachedUser && cachedUser.avatar) {
-            avi = cachedUser.avatar; extraStyle = 'background-color: transparent;';
-        }
-
-        const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
-        
-        // ВЫЧИСЛЕНИЕ ЛОКАЛЬНОГО ВРЕМЕНИ ДЛЯ СТРАНЫ ПОЛЬЗОВАТЕЛЯ
-        let timeString = '';
-        if (data.timestamp) {
-            const msgDate = new Date(data.timestamp);
-            // Форматируем строго под местный часовой пояс устройства
-            const hours = String(msgDate.getHours()).padStart(2, '0');
-            const minutes = String(msgDate.getMinutes()).padStart(2, '0');
-            timeString = `<span class="msg-time">${hours}:${minutes}</span>`;
-        }
-
-        let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
-
-        if (data.text) {
-            let textWithImages = data.text;
-            for (let i = 1; i <= 7; i++) {
-                const marker = `\\[proton_emoji_${i}\\]`;
-                let extension = (i === 6 || i === 7) ? 'jpg' : 'png';
-                const imgTag = `<img src="emojis/${i}.${extension}" style="width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin: 0 2px;">`;
-                textWithImages = textWithImages.replace(new RegExp(marker, 'g'), imgTag);
-            }
-            // Добавляем метку времени к текстовому сообщению
-            contentMarkup += `<div>${textWithImages}${timeString}</div>`;
-        }
-        
-        if (data.imageUrl) {
-            let mediaContainer = '';
-            if (data.imageUrl.includes('data:video/')) {
-                mediaContainer = `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
-            } else if (data.imageUrl.includes('data:audio/')) {
-                mediaContainer = `<audio src="${data.imageUrl}" controls style="margin-top: 5px; display: block;"></audio>`;
-            } else {
-                mediaContainer = `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
-            }
-            
-            // Если текста нет, а отправлен только медиафайл, прикрепляем время прямо под ним
-            if (!data.text) {
-                contentMarkup += `<div>${mediaContainer}${timeString}</div>`;
-            } else {
-                contentMarkup += `<div>${mediaContainer}</div>`;
-            }
-        }
-        
-        contentMarkup += `</div>`; 
-        item.innerHTML = contentMarkup; 
-        messagesDiv.appendChild(item);
-    });
+    messages.forEach(msg => appendSingleMessage(msg, false));
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function openPM(targetNickname) {
-    if(targetNickname.toLowerCase() === userNickname.toLowerCase()) return;
-    const privateId = getPrivateChatId(targetNickname);
-    switchChat(privateId, targetNickname);
+function appendSingleMessage(data, shouldScroll = true) {
+    const messagesDiv = document.getElementById('messages');
+    if (!messagesDiv) return;
+
+    const item = document.createElement('div');
+    item.classList.add('msg');
+    item.classList.add(data.author === userNickname ? 'my' : 'other');
+
+    let authorMarkup = '';
+    if (data.isPremium) {
+        authorMarkup = `<div class="author premium-user" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
+    } else {
+        authorMarkup = `<div class="author" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
+    }
+
+    const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
+    const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    let avi = fallback;
+    let extraStyle = 'background-color: #64748b;'; 
+
+    if (data.author === userNickname) {
+        const myLocalAvatar = localStorage.getItem('proton_avatar');
+        if (myLocalAvatar) { avi = myLocalAvatar; extraStyle = 'background-color: transparent;'; }
+    } else if (cachedUser && cachedUser.avatar) {
+        avi = cachedUser.avatar; extraStyle = 'background-color: transparent;';
+    }
+
+    const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
+    
+    let timeString = '';
+    if (data.timestamp) {
+        const msgDate = new Date(data.timestamp);
+        const hours = String(msgDate.getHours()).padStart(2, '0');
+        const minutes = String(msgDate.getMinutes()).padStart(2, '0');
+        timeString = `<span class="msg-time">${hours}:${minutes}</span>`;
+    }
+
+    let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
+
+    if (data.text) {
+        let textWithImages = data.text;
+        for (let i = 1; i <= 7; i++) {
+            const marker = `\\[proton_emoji_${i}\\]`;
+            let extension = (i === 6 || i === 7) ? 'jpg' : 'png';
+            const imgTag = `<img src="emojis/${i}.${extension}" style="width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin: 0 2px;">`;
+            textWithImages = textWithImages.replace(new RegExp(marker, 'g'), imgTag);
+        }
+        contentMarkup += `<div>${textWithImages}${timeString}</div>`;
+    }
+    if (data.imageUrl) {
+        let mediaContainer = '';
+        if (data.imageUrl.includes('data:video/')) {
+            mediaContainer = `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
+        } else if (data.imageUrl.includes('data:audio/')) {
+            mediaContainer = `<audio src="${data.imageUrl}" controls style="margin-top: 5px; display: block;"></audio>`;
+        } else {
+            mediaContainer = `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
+        }
+        if (!data.text) { contentMarkup += `<div>${mediaContainer}${timeString}</div>`; } 
+        else { contentMarkup += `<div>${mediaContainer}</div>`; }
+    }
+    contentMarkup += `</div>`; 
+    item.innerHTML = contentMarkup; 
+    messagesDiv.appendChild(item);
+    
+    if (shouldScroll) messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
+// ИСПРАВЛЕННАЯ ОТПРАВКА СЛОВ ЧЕРЕЗ СОКЕТ-ПАКЕТ
 async function sendMessage(imageUrl = '') {
     const input = document.getElementById('input');
     if (!input) return;
     const text = input.value.trim();
     if (!text && !imageUrl) return;
 
-    try {
-        await fetch('/api/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, imageUrl, author: userNickname, chatId: currentChatId })
-        });
+    // Шлем пакет мгновенно в сокет-туннель
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+            type: 'message',
+            text: text,
+            imageUrl: imageUrl,
+            chatId: currentChatId
+        }));
         input.value = '';
         const picker = document.getElementById('emoji-picker');
         if (picker) picker.classList.remove('active');
-        fetchHistory();
-    } catch (e) { console.error("Datagram package transmission failed:", e); }
+    } else {
+        alert("Connecting to core kernel... unstable network pipeline.");
+    }
 }
 
-// ФИКС СКРЕПКИ: Строго берем первый файл по индексу [0]
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
-    const targetFile = files[0]; 
-    appendSystemMessage('System status: Processing file stream encoding...');
-
+    const targetFile = files[0]; // Точечный первый индекс для скрепки файлов
     const reader = new FileReader();
     reader.onload = function (e) { sendMessage(e.target.result); };
-    reader.onerror = function (error) { alert('Upload failed.'); };
     reader.readAsDataURL(targetFile); 
 }
 
-let mediaRecorder;
-let audioChunks = [];
-let isRecording = false;
-
+let mediaRecorder; let audioChunks = []; let isRecording = false;
 async function toggleRecording() {
     const btn = document.getElementById('record-button');
     if (!isRecording) {
@@ -332,8 +336,6 @@ function openSettingsModal() {
     const modal = document.getElementById('settings-modal');
     if (!modal) return;
     modal.classList.add('active');
-    
-    // ЖЕЛЕЗОБЕТОННО: Берем аватарку напрямую из локальной памяти, она там есть ВСЕГДА
     const savedAvatar = localStorage.getItem('proton_avatar');
     if (savedAvatar && savedAvatar.trim() !== '') {
         document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${savedAvatar}')`;
@@ -341,37 +343,23 @@ function openSettingsModal() {
         document.getElementById('settings-avatar-preview').style.backgroundImage = 'none';
     }
 }
-
 function closeSettingsModal() { document.getElementById('settings-modal').classList.remove('active'); }
 
 function handleSettingsAvatar(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
-    
-    // БЕРЕМ ИМЕННО ПЕРВЫЙ ФАЙЛ ИЗ СПИСКА
-    const targetFile = files[0]; 
-    
     const reader = new FileReader();
     reader.onload = async function (e) {
         const base64 = e.target.result;
-        
-        // Обновляем превью в настройках
         document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${base64}')`;
-        
-        // Перезаписываем локальную память на Валерьяныча
         localStorage.setItem('proton_avatar', base64);
-        
-        // Отправляем Валерьяныча на сервер, чтобы обновить users.json
         await fetch('/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nickname: userNickname, avatar: base64 })
         });
-        
-        fetchUsers();
     };
-    // ИСПРАВЛЕНО: читаем строго целевой файл targetFile, а не массив files
-    reader.readAsDataURL(targetFile); 
+    reader.readAsDataURL(files[0]);
 }
 
 async function handleSettingsTheme(themeValue) {
@@ -388,28 +376,23 @@ function openProfileCard(targetName, event) {
     if (event) event.stopPropagation();
     const user = globalUsersCache.find(u => u.nickname.toLowerCase() === targetName.toLowerCase());
     if (!user) return;
-
     document.getElementById('view-profile-name').textContent = user.nickname;
     const badge = document.getElementById('view-profile-status');
     badge.textContent = user.isOnline ? 'ONLINE' : 'OFFLINE';
     badge.className = `modal-status-badge ${user.isOnline ? 'online' : ''}`;
-
     const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
     const avi = user.avatar ? user.avatar : fallback;
     document.getElementById('view-profile-avatar').style.backgroundImage = `url('${avi}')`;
-
     const pmBtn = document.getElementById('view-profile-pm-btn');
-    if (user.nickname.toLowerCase() === userNickname.toLowerCase()) {
-        pmBtn.style.display = 'none';
-    } else {
+    if (user.nickname.toLowerCase() === userNickname.toLowerCase()) { pmBtn.style.display = 'none'; } 
+    else {
         pmBtn.style.display = 'block';
         const privateId = getPrivateChatId(user.nickname);
         pmBtn.onclick = () => { closeProfileModal(); switchChat(privateId, user.nickname); };
     }
     document.getElementById('profile-modal').classList.add('active');
 }
-
 function closeProfileModal() { document.getElementById('profile-modal').classList.remove('active'); }
-function closeModal(modalElement, event) { if (event.target === modalElement) modalElement.classList.remove('active'); }
-function appendSystemMessage(text) { console.log(text); }
+function closeModal(m, e) { if (e.target === m) m.classList.remove('active'); }
+function appendSystemMessage(t) { console.log(t); }
 function logout() { localStorage.removeItem('proton_nickname'); localStorage.removeItem('proton_theme'); localStorage.removeItem('proton_avatar'); window.location.href = 'index.html'; }
