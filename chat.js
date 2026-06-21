@@ -158,16 +158,21 @@ function renderMessages(messages) {
         item.classList.add('msg');
         item.classList.add(data.author === userNickname ? 'my' : 'other');
 
+        // Возвращаем золотую корону для премиум пользователей вместо [K]
         let authorMarkup = '';
         if (data.isPremium) {
-            authorMarkup = `<div class="author premium-user" onclick="openProfileCard('${data.author}', event)">[K] ${data.author}</div>`;
+            authorMarkup = `<div class="author premium-user" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
         } else {
             authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
-        const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        // Если у пользователя нет аватарки, ставим красивый силуэт (прозрачный SVG)
+        const fallback = "data:image/svg+xml;utf8,<svg xmlns='http://w3.org' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z'/></svg>";
         const avi = data.authorAvatar ? data.authorAvatar : fallback;
-        const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}')" onclick="openProfileCard('${data.author}', event)"></span>`;
+        
+        // Исправлено: если аватарки нет (используется fallback), убираем серый фон, чтобы силуэт было видно
+        const extraStyle = data.authorAvatar ? '' : 'background-color: #64748b;';
+        const avaImg = `<span class="avatar-circle" style="background-image: url(&quot;${avi}&quot;); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
         
         let contentMarkup = `
             ${avaImg}
