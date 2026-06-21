@@ -53,6 +53,16 @@
         .msg .author:hover { text-decoration: underline; }
         .msg img.chat-media, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .msg audio { max-height: 40px; }
+        /* СТИЛЬ ДЛЯ ВРЕМЕНИ ОТПРАВКИ СООБЩЕНИЯ */
+        .msg-time {
+            font-size: 10px;
+            opacity: 0.6;
+            float: right;
+            margin-top: 4px;
+            margin-left: 10px;
+            user-select: none;
+        }
+
         
         #form { display: flex; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; background: var(--bg-container); padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); }
         #input { flex: 1; padding: 8px 4px; border: none; font-size: 16px; min-width: 0; background: transparent; color: var(--text-main); }

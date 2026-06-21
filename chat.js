@@ -193,9 +193,9 @@ function renderMessages(messages) {
 
         let authorMarkup = '';
         if (data.isPremium) {
-            authorMarkup = `<div class="author premium-user" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
+            authorMarkup = `<div class="author premium-user" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
         } else {
-            authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
+            authorMarkup = `<div class="author" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
         const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
@@ -203,20 +203,25 @@ function renderMessages(messages) {
         let avi = fallback;
         let extraStyle = 'background-color: #64748b;'; 
 
-        // Если сообщение твоё — берём аватарку мгновенно из локальной памяти
         if (data.author === userNickname) {
             const myLocalAvatar = localStorage.getItem('proton_avatar');
-            if (myLocalAvatar) {
-                avi = myLocalAvatar;
-                extraStyle = 'background-color: transparent;';
-            }
+            if (myLocalAvatar) { avi = myLocalAvatar; extraStyle = 'background-color: transparent;'; }
         } else if (cachedUser && cachedUser.avatar) {
-            // Если чужое — берём из кэша сервера
-            avi = cachedUser.avatar;
-            extraStyle = 'background-color: transparent;';
+            avi = cachedUser.avatar; extraStyle = 'background-color: transparent;';
         }
 
         const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
+        
+        // ВЫЧИСЛЕНИЕ ЛОКАЛЬНОГО ВРЕМЕНИ ДЛЯ СТРАНЫ ПОЛЬЗОВАТЕЛЯ
+        let timeString = '';
+        if (data.timestamp) {
+            const msgDate = new Date(data.timestamp);
+            // Форматируем строго под местный часовой пояс устройства
+            const hours = String(msgDate.getHours()).padStart(2, '0');
+            const minutes = String(msgDate.getMinutes()).padStart(2, '0');
+            timeString = `<span class="msg-time">${hours}:${minutes}</span>`;
+        }
+
         let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
 
         if (data.text) {
@@ -227,17 +232,28 @@ function renderMessages(messages) {
                 const imgTag = `<img src="emojis/${i}.${extension}" style="width: 32px; height: 32px; display: inline-block; vertical-align: middle; margin: 0 2px;">`;
                 textWithImages = textWithImages.replace(new RegExp(marker, 'g'), imgTag);
             }
-            contentMarkup += `<div>${textWithImages}</div>`;
+            // Добавляем метку времени к текстовому сообщению
+            contentMarkup += `<div>${textWithImages}${timeString}</div>`;
         }
+        
         if (data.imageUrl) {
+            let mediaContainer = '';
             if (data.imageUrl.includes('data:video/')) {
-                contentMarkup += `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
+                mediaContainer = `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
             } else if (data.imageUrl.includes('data:audio/')) {
-                contentMarkup += `<audio src="${data.imageUrl}" controls style="margin-top: 5px; display: block;"></audio>`;
+                mediaContainer = `<audio src="${data.imageUrl}" controls style="margin-top: 5px; display: block;"></audio>`;
             } else {
-                contentMarkup += `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
+                mediaContainer = `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
+            }
+            
+            // Если текста нет, а отправлен только медиафайл, прикрепляем время прямо под ним
+            if (!data.text) {
+                contentMarkup += `<div>${mediaContainer}${timeString}</div>`;
+            } else {
+                contentMarkup += `<div>${mediaContainer}</div>`;
             }
         }
+        
         contentMarkup += `</div>`; 
         item.innerHTML = contentMarkup; 
         messagesDiv.appendChild(item);
