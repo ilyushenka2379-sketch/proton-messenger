@@ -87,19 +87,40 @@ function getPrivateChatId(targetUser) {
 
 function switchChat(chatId, displayTitle) {
     currentChatId = chatId;
-    document.getElementById('chat-header').textContent = chatId === 'global' ? 'Global Chat' : `DM: ${displayTitle}`;
+    
+    const headerTitle = document.getElementById('chat-header');
+    const headerAvatar = document.getElementById('chat-header-avatar');
+    
     document.querySelectorAll('.room-item').forEach(el => el.classList.remove('active'));
     
     if(chatId === 'global') {
+        headerTitle.textContent = 'Global Chat';
+        headerAvatar.className = 'avatar-circle global-avatar';
+        headerAvatar.textContent = 'Global';
+        headerAvatar.style.backgroundImage = 'none';
         document.getElementById('room-global').classList.add('active');
     } else {
+        headerTitle.textContent = `DM: ${displayTitle}`;
+        headerAvatar.className = 'avatar-circle';
+        headerAvatar.textContent = ''; // Стираем текст Global
+        
+        // Ищем аватарку собеседника в кэше и ставим её в шапку чата
+        const targetUser = globalUsersCache.find(u => u.nickname.toLowerCase() === displayTitle.toLowerCase());
+        if (targetUser && targetUser.avatar) {
+            headerAvatar.style.backgroundImage = `url('${targetUser.avatar}')`;
+            headerAvatar.style.backgroundColor = 'transparent';
+        } else {
+            headerAvatar.style.backgroundImage = 'none';
+            headerAvatar.style.backgroundColor = '#64748b'; // Серый круг, если авы нет
+        }
+        
         const targetElement = document.getElementById(`user-room-${displayTitle}`);
         if(targetElement) targetElement.classList.add('active');
     }
     
     const messagesDiv = document.getElementById('messages');
     if(messagesDiv) messagesDiv.innerHTML = '';
-    fetchHistory(); // Подгружаем историю выбранной комнаты
+    fetchHistory();
 }
 
 async function fetchUsers() {

@@ -20,16 +20,18 @@
         .room-item:hover { background: #1f2937; color: white; }
         .room-item.active { background: #007bff; font-weight: bold; color: white; }
         
-        /* ИСПРАВЛЕННЫЙ КЛАСС ДЛЯ АВАТАРОК */
-        .avatar-circle { 
-            width: 32px; 
-            height: 32px; 
-            border-radius: 50%; 
-            background-size: cover; 
-            background-position: center; 
-            flex-shrink: 0; 
-            display: inline-block; 
-            vertical-align: middle; 
+        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background-size: cover; background-position: center; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
+        
+        /* СТИЛЬНАЯ СТИЛИЗАЦИЯ ДЛЯ ТЕКСТОВОЙ АВАТАРКИ GLOBAL ЧАТА */
+        .avatar-circle.global-avatar {
+            background: linear-gradient(135deg, #38bdf8 0%, #007bff 100%);
+            color: white;
+            font-size: 7px;
+            font-weight: 900;
+            letter-spacing: 0.2px;
+            text-transform: uppercase;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            user-select: none;
         }
 
         .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; position: absolute; right: 12px; top: 20px; }
@@ -53,23 +55,14 @@
         .msg .author:hover { text-decoration: underline; }
         .msg img.chat-media, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .msg audio { max-height: 40px; }
-        /* СТИЛЬ ДЛЯ ВРЕМЕНИ ОТПРАВКИ СООБЩЕНИЯ */
-        .msg-time {
-            font-size: 10px;
-            opacity: 0.6;
-            float: right;
-            margin-top: 4px;
-            margin-left: 10px;
-            user-select: none;
-        }
-
+        .msg-time { font-size: 10px; opacity: 0.6; float: right; margin-top: 4px; margin-left: 10px; user-select: none; }
         
         #form { display: flex; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; background: var(--bg-container); padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); }
         #input { flex: 1; padding: 8px 4px; border: none; font-size: 16px; min-width: 0; background: transparent; color: var(--text-main); }
         #input:focus { outline: none; }
         #file-input { display: none; }
         
-        .file-label, .record-btn, .emoji-btn { background: transparent; color: #8a8a8a; height: 36px; width: 36px; border: none; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: bold; cursor: pointer; transition: color 0.2s; user-select: none; }
+        .file-label, .record-btn, .emoji-btn { background: transparent; color: #8a8a8a; height: 36px; width: 36px; border: none; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 16px; font-weight: bold; cursor: pointer; transition: color 0.2s; user-select: none; }
         .file-label:hover, .record-btn:hover, .emoji-btn:hover { color: #007bff; }
         .record-btn.recording { color: #dc3545; animation: pulse 1s infinite; }
         .btn-main { background: #007bff; color: white; border: none; height: 36px; padding: 0 16px; font-size: 14px; border-radius: 18px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
@@ -102,10 +95,13 @@
             <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
                 <h3 class="sidebar-brand">Proton Chat</h3>
                 <div class="rooms-title">Channels</div>
+                
+                <!-- Добавлена круглая аватарка GLOBAL в левую панель -->
                 <div class="room-item active" id="room-global" onclick="switchChat('global', 'Global Chat')">
-                    <span class="avatar-circle" style="background-color: #007bff;"></span>
+                    <span class="avatar-circle global-avatar">Global</span>
                     Global Chat
                 </div>
+                
                 <div class="rooms-title">Direct Messages</div>
                 <div class="rooms-list" id="users-directory"></div>
             </div>
@@ -115,8 +111,14 @@
                 <button class="sidebar-footer-btn logout-btn" onclick="logout()">Logout</button>
             </div>
         </div>
+
         <div class="chat-area">
-            <div id="chat-header" style="font-size: 16px; font-weight: bold; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">Global Chat</div>
+            <!-- Добавлена аватарка GLOBAL в верхнюю шапку активного чата -->
+            <div id="chat-header-container" style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">
+                <span id="chat-header-avatar" class="avatar-circle global-avatar">Global</span>
+                <div id="chat-header" style="font-size: 16px; font-weight: bold;">Global Chat</div>
+            </div>
+            
             <div id="messages"></div>
             
             <div id="form">
@@ -126,7 +128,7 @@
                     <div class="emoji-section-title" style="color: #b8860b;">Proton Premium</div>
                     <div class="emoji-grid" id="premium-emojis"></div>
                 </div>
-                <label class="file-label" for="file-input">[FILE]</label>
+                <label class="file-label" for="file-input">[F]</label>
                 <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
                 <button id="record-button" class="record-btn" onclick="toggleRecording()">REC</button>
                 <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">SMILE</button>
