@@ -33,15 +33,35 @@ app.post('/api/auth', (req, res) => {
 
     if (users[userKey]) {
         if (isRegisterMode) return res.status(400).json({ success: false, error: 'This nickname is already taken!' });
-        if (users[userKey].password === password) return res.json({ success: true, nickname: users[userKey].nickname });
+        if (users[userKey].password === password) {
+            users[userKey].lastSeen = Date.now();
+            saveData(usersFilePath, users);
+            return res.json({ success: true, nickname: users[userKey].nickname });
+        }
         return res.status(401).json({ success: false, error: 'Incorrect password!' });
     } else {
         if (!isRegisterMode) return res.status(404).json({ success: false, error: 'User not found!' });
         
-        users[userKey] = { nickname, password, isPremium: false };
+        users[userKey] = { nickname, password, isPremium: false, avatar: '', theme: 'light', lastSeen: Date.now() };
         saveData(usersFilePath, users);
         return res.json({ success: true, nickname });
     }
+});
+
+// UPDATE PROFILE (AVATAR & THEME)
+app.post('/api/profile/update', (req, res) => {
+    const { nickname, avatar, theme } = req.body;
+    const users = loadData(usersFilePath);
+    const userKey = nickname.toLowerCase();
+
+    if (!users[userKey]) return res.status(404).json({ success: false, error: 'User not found' });
+
+    if (avatar !== undefined) users[userKey].avatar = avatar;
+    if (theme !== undefined) users[userKey].theme = theme;
+    users[userKey].lastSeen = Date.now();
+
+    saveData(usersFilePath, users);
+    res.json({ success: true, theme: users[userKey].theme, avatar: users[userKey].avatar });
 });
 
 // 2. GET MESSAGES FOR SPECIFIC CHAT
@@ -57,29 +77,33 @@ app.get('/api/messages', (req, res) => {
         const hasPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
                              (users[userKey] && users[userKey].isPremium === true);
 
-        return { ...msg, isPremium: hasPremium };
+        return { 
+            ...msg, 
+            isPremium: hasPremium,
+            authorAvatar: users[userKey] ? users[userKey].avatar : ''
+        };
     });
 
     res.json(enrichedHistory);
 });
 
-// 3. POST NEW MESSAGE (С ЗАЩИТОЙ ОТ ОБХОДА ПРЕМИУМ ЭМОДЗИ)
+// 3. POST NEW MESSAGE WITH EMBEDDED AVATARS VALIDATION
 app.post('/api/messages', (req, res) => {
     const { text, imageUrl, author, chatId } = req.body;
     const currentChat = chatId || 'global';
     const history = loadData(historyFilePath);
     const users = loadData(usersFilePath);
+    const userKey = author.toLowerCase();
+
+    if (users[userKey]) {
+        users[userKey].lastSeen = Date.now();
+        saveData(usersFilePath, users);
+    }
 
     let processedText = text || '';
-
-    // Защитный шлюз: Проверяем, содержит ли текст премиум токены [proton_emoji_X]
     if (processedText.includes('[proton_emoji_')) {
-        const userKey = author.toLowerCase();
-        // Проверяем реальное наличие премиума у автора сообщения
         const isAuthorPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
                                 (users[userKey] && users[userKey].isPremium === true);
-
-        // Если премиума нет, вырезаем все попытки обхода через регулярное выражение
         if (!isAuthorPremium) {
             processedText = processedText.replace(/\[proton_emoji_\d+\]/g, '[🔒 Premium Only]');
         }
@@ -103,11 +127,34 @@ app.post('/api/messages', (req, res) => {
     res.json({ success: true });
 });
 
-// 4. ROUTE TO DISCOVER REGISTERED USERS FOR SIDEBAR LIST
+// 4. GET USERS AND THEIR ONLINE STATUS (Last seen < 5s)
 app.get('/api/users', (req, res) => {
     const users = loadData(usersFilePath);
-    const usersList = Object.values(users).map(u => ({ nickname: u.nickname }));
+    const heartbeatWindow = 5000; // 5 seconds interval
+    
+    const usersList = Object.values(users).map(u => {
+        const isOnline = u.lastSeen && (Date.now() - u.lastSeen < heartbeatWindow);
+        return { 
+            nickname: u.nickname, 
+            avatar: u.avatar || '', 
+            theme: u.theme || 'light',
+            isOnline: !!isOnline 
+        };
+    });
     res.json(usersList);
+});
+
+// ALIVE HEARTBEAT ROUTE
+app.post('/api/heartbeat', (req, res) => {
+    const { nickname } = req.body;
+    if (!nickname) return res.sendStatus(400);
+    const users = loadData(usersFilePath);
+    const userKey = nickname.toLowerCase();
+    if (users[userKey]) {
+        users[userKey].lastSeen = Date.now();
+        saveData(usersFilePath, users);
+    }
+    res.sendStatus(200);
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));

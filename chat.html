@@ -4,68 +4,73 @@
     <meta charset="UTF-8">
     <title>Proton - Chat</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .container { background: white; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); width: 95vw; max-width: 900px; height: 90vh; display: flex; overflow: hidden; box-sizing: border-box; }
+        :root { --bg-app: #f0f2f5; --bg-container: white; --text-main: #1e293b; --border-color: #e2e8f0; --bg-msg-other: white; }
+        [data-theme="dark"] { --bg-app: #0f172a; --bg-container: #1e293b; --text-main: #f8fafc; --border-color: #334155; --bg-msg-other: #334155; }
         
-        .sidebar { width: 250px; background: #1e293b; color: white; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; box-sizing: border-box; }
+        body { font-family: Arial, sans-serif; margin: 0; background: var(--bg-app); color: var(--text-main); display: flex; justify-content: center; align-items: center; height: 100vh; transition: background 0.3s, color 0.3s; }
+        .container { background: var(--bg-container); border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); width: 95vw; max-width: 900px; height: 90vh; display: flex; overflow: hidden; box-sizing: border-box; }
+        
+        .sidebar { width: 250px; background: #111827; color: white; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; flex-shrink: 0; box-sizing: border-box; }
         .sidebar-brand { font-size: 20px; font-weight: bold; margin: 0 0 15px 0; }
         
         .rooms-title { font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: bold; margin: 15px 0 8px 0; letter-spacing: 0.5px; }
         .rooms-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 15px; }
-        .room-item { padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: background 0.2s; display: flex; align-items: center; gap: 8px; }
-        .room-item:hover { background: #334155; }
-        .room-item.active { background: #007bff; font-weight: bold; }
         
-        .logout-btn { background: none; border: none; color: #f87171; cursor: pointer; font-weight: bold; font-size: 15px; text-align: left; padding: 5px 0; transition: color 0.2s; }
-        .logout-btn:hover { color: #ef4444; }
-
-        .chat-area { flex: 1; background: #f5f7fb; display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; position: relative; }
+        .room-item { padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 14px; transition: background 0.2s; display: flex; align-items: center; gap: 10px; position: relative; color: #cbd5e1; }
+        .room-item:hover { background: #1f2937; color: white; }
+        .room-item.active { background: #007bff; font-weight: bold; color: white; }
         
-        #messages::-webkit-scrollbar, .rooms-list::-webkit-scrollbar { width: 6px; }
-        #messages::-webkit-scrollbar-track, .rooms-list::-webkit-scrollbar-track { background: transparent; }
-        #messages::-webkit-scrollbar-thumb, .rooms-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        #messages::-webkit-scrollbar-thumb:hover, .rooms-list::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background: #64748b; background-size: cover; background-position: center; flex-shrink: 0; display: inline-block; vertical-align: middle; border: 1px solid rgba(255,255,255,0.1); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #94a3b8; position: absolute; right: 12px; top: 20px; }
+        .status-dot.online { background: #10b981; box-shadow: 0 0 8px #10b981; }
 
+        .sidebar-footer-btn { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 14px; text-align: left; padding: 5px 0; display: block; width: 100%; transition: color 0.2s; font-weight: bold; }
+        .sidebar-footer-btn:hover { color: white; }
+        .logout-btn { color: #f87171; } .logout-btn:hover { color: #ef4444; }
+
+        .chat-area { flex: 1; background: var(--bg-app); display: flex; flex-direction: column; padding: 20px; box-sizing: border-box; position: relative; }
         #messages { flex: 1; overflow-y: auto; padding: 10px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
         
-        .msg { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; font-size: 15px; animation: slideUp 0.25s ease-out forwards; opacity: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .msg.my { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-        .msg.other { background: white; color: #1e293b; align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid #e2e8f0; }
-        .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; cursor: pointer; }
+        #messages::-webkit-scrollbar, .rooms-list::-webkit-scrollbar { width: 6px; }
+        #messages::-webkit-scrollbar-thumb, .rooms-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+        .msg { padding: 10px 14px; border-radius: 12px; max-width: 75%; word-break: break-word; font-size: 15px; animation: slideUp 0.25s ease-out forwards; opacity: 0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; gap: 10px; align-items: flex-start; }
+        .msg.my { background: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; flex-direction: row-reverse; }
+        .msg.other { background: var(--bg-msg-other); color: var(--text-main); align-self: flex-start; border-bottom-left-radius: 4px; border: 1px solid var(--border-color); }
+        .msg-body { flex: 1; }
+        .msg .author { font-size: 11px; opacity: 0.7; margin-bottom: 4px; font-weight: bold; cursor: pointer; display: inline-block; }
         .msg .author:hover { text-decoration: underline; }
-        .msg img, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
+        .msg img.chat-media, .msg video, .msg audio { max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; }
         .msg audio { max-height: 40px; }
         
-        #form { display: flex; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; position: relative; background: white; padding: 8px 14px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        #input { flex: 1; padding: 8px 4px; border: none; font-size: 16px; min-width: 0; background: transparent; }
+        #form { display: flex; gap: 10px; align-items: center; width: 100%; box-sizing: border-box; background: var(--bg-container); padding: 8px 14px; border-radius: 20px; border: 1px solid var(--border-color); }
+        #input { flex: 1; padding: 8px 4px; border: none; font-size: 16px; min-width: 0; background: transparent; color: var(--text-main); }
         #input:focus { outline: none; }
-        
         #file-input { display: none; }
         
-        .file-label, .record-btn, .emoji-btn { background: transparent; color: #8a8a8a; height: 36px; width: 36px; border: none; display: flex; align-items: center; justify-content: center; box-sizing: border-box; flex-shrink: 0; font-size: 20px; cursor: pointer; transition: color 0.2s ease, transform 0.1s ease; user-select: none; }
-        .file-label:hover, .record-btn:hover, .emoji-btn:hover { color: #4b5563; }
-        .file-label:active, .record-btn:active, .emoji-btn:active { transform: scale(0.9); }
-        
-        .record-btn.recording { color: #dc3545; animation: pulse 1s infinite; font-weight: bold; font-size: 14px; }
-        .btn-main { background: #007bff; color: white; border: none; height: 36px; padding: 0 16px; font-size: 14px; border-radius: 18px; cursor: pointer; font-weight: bold; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s ease, transform 0.1s ease; }
+        .file-label, .record-btn, .emoji-btn { background: transparent; color: #8a8a8a; height: 36px; width: 36px; border: none; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: bold; cursor: pointer; transition: color 0.2s; user-select: none; }
+        .file-label:hover, .record-btn:hover, .emoji-btn:hover { color: #007bff; }
+        .record-btn.recording { color: #dc3545; animation: pulse 1s infinite; }
+        .btn-main { background: #007bff; color: white; border: none; height: 36px; padding: 0 16px; font-size: 14px; border-radius: 18px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
         .btn-main:hover { background: #0056b3; }
-        .btn-main:active { transform: scale(0.95); }
 
-        .msg .author.premium-user { color: #d4af37 !important; font-weight: 900; text-shadow: 0 0 3px rgba(212, 175, 55, 0.5); }
-        .premium-crown { margin-right: 4px; font-size: 12px; vertical-align: middle; }
+        .emoji-picker { display: none; position: absolute; bottom: 65px; left: 15px; width: 280px; background: var(--bg-container); border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 10px; z-index: 100; box-sizing: border-box; }
+        .emoji-picker.active { display: block; }
+        .emoji-section-title { font-size: 12px; font-weight: bold; color: #64748b; margin: 5px 0; text-transform: uppercase; }
+        .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; max-height: 120px; overflow-y: auto; }
+        .emoji-item { font-size: 20px; text-align: center; padding: 4px; cursor: pointer; border-radius: 4px; }
+        .emoji-item:hover { background: rgba(0,0,0,0.05); }
+        .emoji-item.premium-slot { position: relative; background: #fff9e6; border: 1px dashed #ffe0b2; display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; margin: 0 auto; }
 
-        .emoji-picker { display: none; position: absolute; bottom: 65px; left: 15px; width: 280px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 10px; z-index: 100; box-sizing: border-box; opacity: 0; transition: opacity 0.2s ease; pointer-events: none; }
-        .emoji-picker.active { display: block; opacity: 1; pointer-events: auto; }
-        .emoji-section-title { font-size: 12px; font-weight: bold; color: #64748b; margin: 5px 0; text-transform: uppercase; letter-spacing: 0.5px; }
-        .emoji-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; max-height: 120px; overflow-y: auto; margin-bottom: 10px; }
-        .emoji-item { font-size: 20px; text-align: center; padding: 4px; cursor: pointer; border-radius: 4px; transition: background 0.1s; user-select: none; }
-        .emoji-item:hover { background: #f1f5f9; }
-        
-        .emoji-item.premium-slot { position: relative; background: #fff9e6; border: 1px dashed #ffe0b2; display: flex; align-items: center; justify-content: center; height: 32px; width: 32px; margin: 0 auto; border-radius: 4px; }
-        .emoji-item.premium-slot::after { content: "🔒"; position: absolute; bottom: -2px; right: -2px; font-size: 9px; z-index: 2; }
-        .emoji-item.premium-slot:hover { background: #fff3cd; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-card { background: var(--bg-container); border-radius: 12px; padding: 25px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); text-align: center; position: relative; border: 1px solid var(--border-color); }
+        .modal-close { position: absolute; top: 12px; right: 12px; cursor: pointer; font-size: 18px; color: #8492a6; }
+        .modal-avatar-preview { width: 80px; height: 80px; border-radius: 50%; background: #cbd5e1; margin: 0 auto 15px auto; background-size: cover; background-position: center; position: relative; }
+        .modal-status-badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; margin-top: 10px; background: #cbd5e1; color: #475569; }
+        .modal-status-badge.online { background: #d1fae5; color: #065f46; }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
@@ -74,41 +79,68 @@
     <div class="container">
         <div class="sidebar">
             <div style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
-                <h3 class="sidebar-brand">Proton Chat 💬</h3>
-                
+                <h3 class="sidebar-brand">Proton Chat</h3>
                 <div class="rooms-title">Channels</div>
-                <div class="room-item active" id="room-global" onclick="switchChat('global', 'Global Chat')">🌍 Global Chat</div>
-                
+                <div class="room-item active" id="room-global" onclick="switchChat('global', 'Global Chat')">
+                    <span class="avatar-circle" style="background-color: #007bff;"></span>
+                    Global Chat
+                </div>
                 <div class="rooms-title">Direct Messages</div>
                 <div class="rooms-list" id="users-directory"></div>
             </div>
             <div>
-                <div id="current-profile-display" style="font-size: 12px; color: #94a3b8; margin-bottom: 10px; font-weight: bold; border-top: 1px solid #334155; padding-top: 10px;"></div>
-                <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+                <div id="current-profile-display" style="font-size: 12px; color: #94a3b8; margin-bottom: 10px; font-weight: bold; border-top: 1px solid #334155; padding-top: 10px; display: flex; align-items: center; gap: 8px;"></div>
+                <button class="sidebar-footer-btn" onclick="openSettingsModal()">Settings</button>
+                <button class="sidebar-footer-btn logout-btn" onclick="logout()">Logout</button>
             </div>
         </div>
-
         <div class="chat-area">
-            <div id="chat-header" style="font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #1e293b; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0;">🌍 Global Chat</div>
-            
+            <div id="chat-header" style="font-size: 16px; font-weight: bold; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-color);">Global Chat</div>
             <div id="messages"></div>
             
             <div id="form">
                 <div id="emoji-picker" class="emoji-picker">
                     <div class="emoji-section-title">Standard</div>
                     <div class="emoji-grid" id="standard-emojis"></div>
-                    <div class="emoji-section-title" style="color: #b8860b;">👑 Proton Premium (7 Slots)</div>
+                    <div class="emoji-section-title" style="color: #b8860b;">Proton Premium</div>
                     <div class="emoji-grid" id="premium-emojis"></div>
                 </div>
-
-                <label class="file-label" for="file-input">📎</label>
+                <label class="file-label" for="file-input">[FILE]</label>
                 <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
-                
                 <button id="record-button" class="record-btn" onclick="toggleRecording()">REC</button>
-                <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😀</button>
-                
+                <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">SMILE</button>
                 <input id="input" autocomplete="off" placeholder="Type a message..." />
                 <button class="btn-main" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="settings-modal" class="modal-overlay" onclick="closeModal(this, event)">
+        <div class="modal-card">
+            <span class="modal-close" onclick="closeSettingsModal()">[x]</span>
+            <h3>Profile Settings</h3>
+            <div id="settings-avatar-preview" class="modal-avatar-preview"></div>
+            <label class="btn-main" style="display:inline-block; line-height:36px; height:36px; padding:0 15px; margin-bottom: 20px; cursor:pointer;">
+                Upload Avatar <input type="file" accept="image/*" style="display:none;" onchange="handleSettingsAvatar(this)">
+            </label>
+            <div style="margin-top: 10px;">
+                <label style="font-weight:bold; display:block; margin-bottom: 8px;">Theme Select:</label>
+                <select id="theme-selector" onchange="handleSettingsTheme(this.value)" style="width:100%; padding:10px; border-radius:6px; background:var(--bg-app); color:var(--text-main); border:1px solid var(--border-color);">
+                    <option value="light">Light Theme</option>
+                    <option value="dark">Dark Theme</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-modal" class="modal-overlay" onclick="closeModal(this, event)">
+        <div class="modal-card">
+            <span class="modal-close" onclick="closeProfileModal()">[x]</span>
+            <div id="view-profile-avatar" class="modal-avatar-preview" style="width:100px; height:100px; margin-top:15px;"></div>
+            <h2 id="view-profile-name" style="margin:5px 0;"></h2>
+            <div id="view-profile-status" class="modal-status-badge"></div>
+            <div style="margin-top:20px;">
+                <button id="view-profile-pm-btn" class="btn-main" style="width:100%;">Private Message</button>
             </div>
         </div>
     </div>
