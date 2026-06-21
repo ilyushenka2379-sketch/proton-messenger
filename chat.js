@@ -120,24 +120,6 @@ async function fetchUsers() {
             `;
             container.appendChild(item);
         });
-
-        document.querySelectorAll('.msg').forEach(msgNode => {
-            const authorNode = msgNode.querySelector('.author');
-            if (!authorNode) return;
-            
-            const rawAuthor = authorNode.getAttribute('data-author-name');
-            if (!rawAuthor) return;
-            
-            const userObj = globalUsersCache.find(u => u.nickname.toLowerCase() === rawAuthor.toLowerCase());
-            if (userObj && userObj.avatar) {
-                const avatarCircle = msgNode.querySelector('.avatar-circle');
-                if (avatarCircle) {
-                    avatarCircle.style.backgroundImage = `url('${userObj.avatar}')`;
-                    avatarCircle.style.backgroundColor = 'transparent';
-                }
-            }
-        });
-
     } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
 
@@ -192,20 +174,15 @@ function renderMessages(messages) {
 
         let authorMarkup = '';
         if (data.isPremium) {
-            authorMarkup = `<div class="author premium-user" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
+            authorMarkup = `<div class="author premium-user" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
         } else {
-            authorMarkup = `<div class="author" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
+            authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
-        const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
+        // ЖЕЛЕЗОБЕТОННЫЙ ВЫВОД АВАТАРОК: Берём готовую строку Base64, которую прислал сервер
         const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        let avi = fallback;
-        let extraStyle = 'background-color: #64748b;'; 
-
-        if (cachedUser && cachedUser.avatar) {
-            avi = cachedUser.avatar;
-            extraStyle = 'background-color: transparent;';
-        }
+        let avi = (data.authorAvatar && data.authorAvatar.trim() !== '') ? data.authorAvatar : fallback;
+        let extraStyle = (data.authorAvatar && data.authorAvatar.trim() !== '') ? 'background-color: transparent;' : 'background-color: #64748b;';
 
         const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
         let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
@@ -229,9 +206,7 @@ function renderMessages(messages) {
                 contentMarkup += `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
             }
         }
-        contentMarkup += `</div>`; 
-        item.innerHTML = contentMarkup; 
-        messagesDiv.appendChild(item);
+        contentMarkup += `</div>`; item.innerHTML = contentMarkup; messagesDiv.appendChild(item);
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
@@ -261,23 +236,17 @@ async function sendMessage(imageUrl = '') {
     } catch (e) { console.error("Datagram package transmission failed:", e); }
 }
 
+// ФИКС СКРЕПКИ: Строго берем первый файл по индексу [0]
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
-    
-    // ИСПРАВЛЕНО: берем именно первый файл из массива через [0]
     const targetFile = files[0]; 
-    
     appendSystemMessage('System status: Processing file stream encoding...');
 
     const reader = new FileReader();
-    reader.onload = function (e) { 
-        sendMessage(e.target.result); 
-    };
-    reader.onerror = function (error) { 
-        alert('Upload failed.'); 
-    };
-    reader.readAsDataURL(targetFile); // ИСПРАВЛЕНО: читаем конкретный файл
+    reader.onload = function (e) { sendMessage(e.target.result); };
+    reader.onerror = function (error) { alert('Upload failed.'); };
+    reader.readAsDataURL(targetFile); 
 }
 
 let mediaRecorder;
@@ -338,7 +307,7 @@ function handleSettingsAvatar(inputElement) {
         });
         fetchUsers();
     };
-    reader.readAsDataURL(files);
+    reader.readAsDataURL(files[0]); // Строго первый файл для настроек аватара
 }
 
 async function handleSettingsTheme(themeValue) {
@@ -378,4 +347,5 @@ function openProfileCard(targetName, event) {
 
 function closeProfileModal() { document.getElementById('profile-modal').classList.remove('active'); }
 function closeModal(modalElement, event) { if (event.target === modalElement) modalElement.classList.remove('active'); }
+function appendSystemMessage(text) { console.log(text); }
 function logout() { localStorage.removeItem('proton_nickname'); localStorage.removeItem('proton_theme'); localStorage.removeItem('proton_avatar'); window.location.href = 'index.html'; }
