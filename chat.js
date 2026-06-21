@@ -16,7 +16,6 @@ const PREMIUM_EMOJIS_SLOTS = [
 ];
 
 window.addEventListener('DOMContentLoaded', () => {
-    // МГНОВЕННО ПРИМЕНЯЕМ ТЕМУ ИЗ ПАМЯТИ ДО ЗАПРОСА К СЕРВЕРУ
     const savedTheme = localStorage.getItem('proton_theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
 
@@ -25,7 +24,7 @@ window.addEventListener('DOMContentLoaded', () => {
     
     const profileNode = document.getElementById('current-profile-display');
     if(profileNode) {
-        const savedAvatar = localStorage.getItem('proton_avatar') || 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
+        const savedAvatar = localStorage.getItem('proton_avatar') || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
         profileNode.innerHTML = `
             <span class="avatar-circle" style="background-image: url('${savedAvatar}')"></span>
             <span>${userNickname}</span>
@@ -85,7 +84,6 @@ async function fetchUsers() {
     try {
         const response = await fetch('/api/users');
         globalUsersCache = await response.json();
-        
         const container = document.getElementById('users-directory');
         if(!container) return;
         
@@ -93,8 +91,10 @@ async function fetchUsers() {
         if (me) {
             document.documentElement.setAttribute('data-theme', me.theme || 'light');
             document.getElementById('theme-selector').value = me.theme || 'light';
+            localStorage.setItem('proton_theme', me.theme || 'light');
+            if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
             
-            const avatarUrl = me.avatar ? me.avatar : 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
+            const avatarUrl = me.avatar ? me.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             document.getElementById('current-profile-display').innerHTML = `
                 <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
                 <span>${userNickname}</span>
@@ -110,12 +110,12 @@ async function fetchUsers() {
             item.className = `room-item ${currentChatId === privateId ? 'active' : ''}`;
             item.id = `user-room-${user.nickname}`;
             
-            const userAvatar = user.avatar ? user.avatar : 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
+            const userAvatar = user.avatar ? user.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             const statusClass = user.isOnline ? 'online' : '';
             
             item.innerHTML = `
                 <span class="avatar-circle" style="background-image: url('${userAvatar}')" onclick="openProfileCard('${user.nickname}', event)"></span>
-                <span style="flex:1;" onclick="switchChat('${privateId}', '${user.nickname}')">${user.nickname}</span>
+                <span onclick="switchChat('${privateId}', '${user.nickname}')">${user.nickname}</span>
                 <span class="status-dot ${statusClass}"></span>
             `;
             container.appendChild(item);
@@ -142,52 +142,22 @@ function initEmojiPicker() {
         });
     }
 }
-function toggleEmojiPicker() { const p = document.getElementById('emoji-picker'); if (p) p.classList.toggle('active'); }
-function insertEmoji(e, p) { if (p && !isCurrentUserPremium) { alert('Premium Only!'); return; } const i = document.getElementById('input'); if (i) { i.value += e; i.focus(); } }
 
-async function fetchUsers() {
+function toggleEmojiPicker() { const p = document.getElementById('emoji-picker'); if (p) p.classList.toggle('active'); }
+function insertEmoji(e, p) { if (p && !isCurrentUserPremium) { alert('🔒 Premium Only!'); return; } const i = document.getElementById('input'); if (i) { i.value += e; i.focus(); } }
+
+async function fetchHistory() {
     try {
-        const response = await fetch('/api/users');
-        globalUsersCache = await response.json();
-        
-        const container = document.getElementById('users-directory');
-        if(!container) return;
-        
-        const me = globalUsersCache.find(u => u.nickname.toLowerCase() === userNickname.toLowerCase());
-        if (me) {
-            // Синхронизируем серверные настройки с локальной памятью
-            document.documentElement.setAttribute('data-theme', me.theme || 'light');
-            document.getElementById('theme-selector').value = me.theme || 'light';
-            localStorage.setItem('proton_theme', me.theme || 'light');
-            if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
-            
-            const avatarUrl = me.avatar ? me.avatar : 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
-            document.getElementById('current-profile-display').innerHTML = `
-                <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
-                <span>${userNickname}</span>
-            `;
+        const response = await fetch(`/api/messages?chatId=${currentChatId}`);
+        const messages = await response.json();
+        const myLastMsg = [...messages].reverse().find(m => m.author === userNickname);
+        if (myLastMsg) {
+            isCurrentUserPremium = myLastMsg.isPremium;
+        } else {
+            if(userNickname.toLowerCase() === 'gdlyuha103') isCurrentUserPremium = true;
         }
-        
-        container.innerHTML = '';
-        globalUsersCache.forEach(user => {
-            if(user.nickname.toLowerCase() === userNickname.toLowerCase()) return;
-            
-            const privateId = getPrivateChatId(user.nickname);
-            const item = document.createElement('div');
-            item.className = `room-item ${currentChatId === privateId ? 'active' : ''}`;
-            item.id = `user-room-${user.nickname}`;
-            
-            const userAvatar = user.avatar ? user.avatar : 'data:image/svg+xml;utf8,<svg xmlns="http://w3.org" viewBox="0 0 24 24" fill="%2364748b"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z"/></svg>';
-            const statusClass = user.isOnline ? 'online' : '';
-            
-            item.innerHTML = `
-                <span class="avatar-circle" style="background-image: url('${userAvatar}')" onclick="openProfileCard('${user.nickname}', event)"></span>
-                <span onclick="switchChat('${privateId}', '${user.nickname}')">${user.nickname}</span>
-                <span class="status-dot ${statusClass}"></span>
-            `;
-            container.appendChild(item);
-        });
-    } catch(e) { console.error("Users sync stream interrupted:", e); }
+        renderMessages(messages);
+    } catch (e) { console.error("Sync data transaction error:", e); }
 }
 
 function renderMessages(messages) {
@@ -202,7 +172,6 @@ function renderMessages(messages) {
         item.classList.add('msg');
         item.classList.add(data.author === userNickname ? 'my' : 'other');
 
-        // Возвращаем золотую корону для премиум пользователей вместо [K]
         let authorMarkup = '';
         if (data.isPremium) {
             authorMarkup = `<div class="author premium-user" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
@@ -210,19 +179,14 @@ function renderMessages(messages) {
             authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
-        // Если у пользователя нет аватарки, ставим красивый силуэт (прозрачный SVG)
-        const fallback = "data:image/svg+xml;utf8,<svg xmlns='http://w3.org' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5-4-8-4z'/></svg>";
-        const avi = data.authorAvatar ? data.authorAvatar : fallback;
-        
-        // Исправлено: если аватарки нет (используется fallback), убираем серый фон, чтобы силуэт было видно
-        const extraStyle = data.authorAvatar ? '' : 'background-color: #64748b;';
-        const avaImg = `<span class="avatar-circle" style="background-image: url(&quot;${avi}&quot;); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
-        
-        let contentMarkup = `
-            ${avaImg}
-            <div class="msg-body">
-                ${authorMarkup}
-        `;
+        const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
+        const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        let avi = fallback;
+        let extraStyle = 'background-color: #64748b;';
+        if (cachedUser && cachedUser.avatar) { avi = cachedUser.avatar; extraStyle = 'background-color: transparent;'; }
+
+        const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
+        let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
 
         if (data.text) {
             let textWithImages = data.text;
@@ -234,7 +198,6 @@ function renderMessages(messages) {
             }
             contentMarkup += `<div>${textWithImages}</div>`;
         }
-        
         if (data.imageUrl) {
             if (data.imageUrl.includes('data:video/')) {
                 contentMarkup += `<video src="${data.imageUrl}" controls style="max-width: 100%; border-radius: 8px; margin-top: 5px; display: block; max-height: 250px;"></video>`;
@@ -244,12 +207,15 @@ function renderMessages(messages) {
                 contentMarkup += `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
             }
         }
-        
-        contentMarkup += `</div>`;
-        item.innerHTML = contentMarkup;
-        messagesDiv.appendChild(item);
+        contentMarkup += `</div>`; item.innerHTML = contentMarkup; messagesDiv.appendChild(item);
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function openPM(targetNickname) {
+    if(targetNickname.toLowerCase() === userNickname.toLowerCase()) return;
+    const privateId = getPrivateChatId(targetNickname);
+    switchChat(privateId, targetNickname);
 }
 
 async function sendMessage(imageUrl = '') {
@@ -268,19 +234,16 @@ async function sendMessage(imageUrl = '') {
         const picker = document.getElementById('emoji-picker');
         if (picker) picker.classList.remove('active');
         fetchHistory();
-    } catch (e) { console.error("Transmission failed:", e); }
+    } catch (e) { console.error("Datagram package transmission failed:", e); }
 }
 
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
-    const targetFile = files[0];
-    appendSystemMessage('System status: Processing file stream encoding...');
-
     const reader = new FileReader();
     reader.onload = function (e) { sendMessage(e.target.result); };
     reader.onerror = function (error) { alert('Upload failed.'); };
-    reader.readAsDataURL(targetFile); 
+    reader.readAsDataURL(files); 
 }
 
 let mediaRecorder;
@@ -333,10 +296,7 @@ function handleSettingsAvatar(inputElement) {
     reader.onload = async function (e) {
         const base64 = e.target.result;
         document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${base64}')`;
-        
-        // СОХРАНЯЕМ АВАТАРКУ ЛОКАЛЬНО ДЛЯ МГНОВЕННОГО СТАРТА
         localStorage.setItem('proton_avatar', base64);
-        
         await fetch('/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -344,15 +304,12 @@ function handleSettingsAvatar(inputElement) {
         });
         fetchUsers();
     };
-    reader.readAsDataURL(files[0]); // Исправлен точечный индекс [0]
+    reader.readAsDataURL(files);
 }
 
 async function handleSettingsTheme(themeValue) {
     document.documentElement.setAttribute('data-theme', themeValue);
-    
-    // СОХРАНЯЕМ ТЕМУ ЛОКАЛЬНО
     localStorage.setItem('proton_theme', themeValue);
-    
     await fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -382,17 +339,9 @@ function openProfileCard(targetName, event) {
         const privateId = getPrivateChatId(user.nickname);
         pmBtn.onclick = () => { closeProfileModal(); switchChat(privateId, user.nickname); };
     }
-
     document.getElementById('profile-modal').classList.add('active');
 }
 
 function closeProfileModal() { document.getElementById('profile-modal').classList.remove('active'); }
 function closeModal(modalElement, event) { if (event.target === modalElement) modalElement.classList.remove('active'); }
-function appendSystemMessage(text) { console.log(text); }
-function logout() { 
-    // При выходе полностью чистим всё за собой
-    localStorage.removeItem('proton_nickname');
-    localStorage.removeItem('proton_theme');
-    localStorage.removeItem('proton_avatar');
-    window.location.href = 'index.html';
-}
+function logout() { localStorage.removeItem('proton_nickname'); localStorage.removeItem('proton_theme'); localStorage.removeItem('proton_avatar'); window.location.href = 'index.html'; }
