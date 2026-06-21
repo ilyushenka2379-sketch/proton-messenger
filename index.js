@@ -210,5 +210,4 @@ function broadcast(data) {
     });
 }
 
-const PORT = process.env.PORT || 5002;
 server.listen(PORT, () => console.log(`Proton local kernel operating with WebSockets on port ${PORT}`));
