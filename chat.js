@@ -333,6 +333,10 @@ function handleSettingsAvatar(inputElement) {
     reader.onload = async function (e) {
         const base64 = e.target.result;
         document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${base64}')`;
+        
+        // СОХРАНЯЕМ АВАТАРКУ ЛОКАЛЬНО ДЛЯ МГНОВЕННОГО СТАРТА
+        localStorage.setItem('proton_avatar', base64);
+        
         await fetch('/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -340,11 +344,15 @@ function handleSettingsAvatar(inputElement) {
         });
         fetchUsers();
     };
-    reader.readAsDataURL(files[0]);
+    reader.readAsDataURL(files[0]); // Исправлен точечный индекс [0]
 }
 
 async function handleSettingsTheme(themeValue) {
     document.documentElement.setAttribute('data-theme', themeValue);
+    
+    // СОХРАНЯЕМ ТЕМУ ЛОКАЛЬНО
+    localStorage.setItem('proton_theme', themeValue);
+    
     await fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -381,4 +389,10 @@ function openProfileCard(targetName, event) {
 function closeProfileModal() { document.getElementById('profile-modal').classList.remove('active'); }
 function closeModal(modalElement, event) { if (event.target === modalElement) modalElement.classList.remove('active'); }
 function appendSystemMessage(text) { console.log(text); }
-function logout() { localStorage.removeItem('proton_nickname'); window.location.href = 'index.html'; }
+function logout() { 
+    // При выходе полностью чистим всё за собой
+    localStorage.removeItem('proton_nickname');
+    localStorage.removeItem('proton_theme');
+    localStorage.removeItem('proton_avatar');
+    window.location.href = 'index.html';
+}
