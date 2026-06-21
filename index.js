@@ -63,21 +63,36 @@ app.get('/api/messages', (req, res) => {
     res.json(enrichedHistory);
 });
 
-// 3. POST NEW MESSAGE WITH FIXED CLEANUP LOGIC
+// 3. POST NEW MESSAGE (С ЗАЩИТОЙ ОТ ОБХОДА ПРЕМИУМ ЭМОДЗИ)
 app.post('/api/messages', (req, res) => {
     const { text, imageUrl, author, chatId } = req.body;
     const currentChat = chatId || 'global';
     const history = loadData(historyFilePath);
+    const users = loadData(usersFilePath);
+
+    let processedText = text || '';
+
+    // Защитный шлюз: Проверяем, содержит ли текст премиум токены [proton_emoji_X]
+    if (processedText.includes('[proton_emoji_')) {
+        const userKey = author.toLowerCase();
+        // Проверяем реальное наличие премиума у автора сообщения
+        const isAuthorPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
+                                (users[userKey] && users[userKey].isPremium === true);
+
+        // Если премиума нет, вырезаем все попытки обхода через регулярное выражение
+        if (!isAuthorPremium) {
+            processedText = processedText.replace(/\[proton_emoji_\d+\]/g, '[🔒 Premium Only]');
+        }
+    }
     
     history.push({ 
         chatId: currentChat, 
-        text: text || '', 
+        text: processedText, 
         imageUrl: imageUrl || '', 
         author, 
         timestamp: Date.now() 
     });
     
-    // Исправлено: Очищаем историю только для текущей комнаты, если сообщений больше 50
     const currentChannelMsgs = history.filter(m => m.chatId === currentChat);
     if (currentChannelMsgs.length > 50) {
         const firstIndex = history.findIndex(m => m.chatId === currentChat);
