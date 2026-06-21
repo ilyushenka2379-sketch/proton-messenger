@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const fs = require('fs');
+const { WebSocketServer, WebSocket } = require('ws'); // Инициализируем сокеты
 
 const app = express();
 app.use(express.json({ limit: '100mb' }));
@@ -9,7 +10,6 @@ app.use(express.static(__dirname));
 
 const usersFilePath = path.join(__dirname, 'users.json');
 const historyFilePath = path.join(__dirname, 'history.json');
-
 const PREMIUM_NICKNAMES = ['GDlyuha103']; 
 
 function loadData(filePath) {
@@ -48,7 +48,7 @@ app.post('/api/auth', (req, res) => {
     }
 });
 
-// UPDATE PROFILE (AVATAR & THEME)
+// UPDATE PROFILE
 app.post('/api/profile/update', (req, res) => {
     const { nickname, avatar, theme } = req.body;
     const users = loadData(usersFilePath);
@@ -61,104 +61,154 @@ app.post('/api/profile/update', (req, res) => {
     users[userKey].lastSeen = Date.now();
 
     saveData(usersFilePath, users);
+    
+    // Оповещаем всех по веб-сокету, что профили обновились
+    broadcast({ type: 'users_updated' });
+    
     res.json({ success: true, theme: users[userKey].theme, avatar: users[userKey].avatar });
 });
 
-// 2. GET MESSAGES FOR SPECIFIC CHAT
+// GET USERS LIST
+app.get('/api/users', (req, res) => {
+    const users = loadData(usersFilePath);
+    const heartbeatWindow = 5000;
+    const usersList = Object.values(users).map(u => ({
+        nickname: u.nickname,
+        avatar: u.avatar || '',
+        theme: u.theme || 'light',
+        isOnline: u.lastSeen && (Date.now() - u.lastSeen < heartbeatWindow)
+    }));
+    res.json(usersList);
+});
+
+// HTTP HISTORY BACKUP FOR INITIAL LOAD
 app.get('/api/messages', (req, res) => {
     const targetChatId = req.query.chatId || 'global';
     const history = loadData(historyFilePath);
     const users = loadData(usersFilePath);
 
-    const filteredHistory = history.filter(msg => msg.chatId === targetChatId);
-
-    const enrichedHistory = filteredHistory.map(msg => {
+    const filteredHistory = history.filter(msg => msg.chatId === targetChatId).map(msg => {
         const userKey = msg.author.toLowerCase();
         const hasPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
                              (users[userKey] && users[userKey].isPremium === true);
-
-        return { 
-            ...msg, 
-            isPremium: hasPremium,
-            authorAvatar: users[userKey] ? users[userKey].avatar : ''
-        };
+        return { ...msg, isPremium: hasPremium, authorAvatar: users[userKey] ? users[userKey].avatar : '' };
     });
-
-    res.json(enrichedHistory);
-});
-
-// 3. POST NEW MESSAGE WITH EMBEDDED AVATARS VALIDATION
-app.post('/api/messages', (req, res) => {
-    const { text, imageUrl, author, chatId } = req.body;
-    const currentChat = chatId || 'global';
-    const history = loadData(historyFilePath);
-    const users = loadData(usersFilePath);
-    const userKey = author.toLowerCase();
-
-    if (users[userKey]) {
-        users[userKey].lastSeen = Date.now();
-        saveData(usersFilePath, users);
-    }
-
-    let processedText = text || '';
-    if (processedText.includes('[proton_emoji_')) {
-        const isAuthorPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
-                                (users[userKey] && users[userKey].isPremium === true);
-        if (!isAuthorPremium) {
-            processedText = processedText.replace(/\[proton_emoji_\d+\]/g, '[🔒 Premium Only]');
-        }
-    }
-    
-    history.push({ 
-        chatId: currentChat, 
-        text: processedText, 
-        imageUrl: imageUrl || '', 
-        author, 
-        timestamp: Date.now() 
-    });
-    
-    const currentChannelMsgs = history.filter(m => m.chatId === currentChat);
-    if (currentChannelMsgs.length > 50) {
-        const firstIndex = history.findIndex(m => m.chatId === currentChat);
-        if (firstIndex !== -1) history.splice(firstIndex, 1);
-    }
-    
-    saveData(historyFilePath, history);
-    res.json({ success: true });
-});
-
-// 4. GET USERS AND THEIR ONLINE STATUS (Last seen < 5s)
-app.get('/api/users', (req, res) => {
-    const users = loadData(usersFilePath);
-    const heartbeatWindow = 5000; // 5 seconds interval
-    
-    const usersList = Object.values(users).map(u => {
-        const isOnline = u.lastSeen && (Date.now() - u.lastSeen < heartbeatWindow);
-        return { 
-            nickname: u.nickname, 
-            avatar: u.avatar || '', 
-            theme: u.theme || 'light',
-            isOnline: !!isOnline 
-        };
-    });
-    res.json(usersList);
-});
-
-// ALIVE HEARTBEAT ROUTE
-app.post('/api/heartbeat', (req, res) => {
-    const { nickname } = req.body;
-    if (!nickname) return res.sendStatus(400);
-    const users = loadData(usersFilePath);
-    const userKey = nickname.toLowerCase();
-    if (users[userKey]) {
-        users[userKey].lastSeen = Date.now();
-        saveData(usersFilePath, users);
-    }
-    res.sendStatus(200);
+    res.json(filteredHistory);
 });
 
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/chat', (req, res) => res.sendFile(path.join(__dirname, 'chat.html')));
 
 const PORT = process.env.PORT || 5002;
-http.createServer(app).listen(PORT, () => console.log(`Proton local kernel operating on port ${PORT}`));
+const server = http.createServer(app);
+
+// --- ИНИЦИАЛИЗАЦИЯ ВЕБ-СОКЕТ СЕРВЕРА ---
+const wss = new WebSocketServer({ server });
+const clients = new Map(); // Храним активные сокет-сессии пользователей
+
+wss.on('connection', (ws) => {
+    let clientNickname = '';
+
+    ws.on('message', (message) => {
+        try {
+            const packet = JSON.parse(message);
+            
+            // 1. Клиент зашел и регистрирует свою сокет-сессию
+            if (packet.type === 'register') {
+                clientNickname = packet.nickname;
+                clients.set(clientNickname.toLowerCase(), ws);
+                updateUserStatus(clientNickname);
+                broadcast({ type: 'users_updated' });
+            }
+            
+            // 2. Клиент прислал сигнал "Я в сети"
+            if (packet.type === 'heartbeat') {
+                updateUserStatus(clientNickname);
+            }
+
+            // 3. Клиент отправляет новое сообщение в чат
+            if (packet.type === 'message') {
+                const { text, imageUrl, chatId } = packet;
+                const users = loadData(usersFilePath);
+                const userKey = clientNickname.toLowerCase();
+                
+                updateUserStatus(clientNickname);
+
+                let processedText = text || '';
+                if (processedText.includes('[proton_emoji_')) {
+                    const isPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
+                                        (users[userKey] && users[userKey].isPremium === true);
+                    if (!isPremium) processedText = processedText.replace(/\[proton_emoji_\d+\]/g, '[🔒 Premium Only]');
+                }
+
+                const newMsg = {
+                    chatId: chatId || 'global',
+                    text: processedText,
+                    imageUrl: imageUrl || '',
+                    author: clientNickname,
+                    timestamp: Date.now()
+                };
+
+                // Сохраняем в файл json
+                const history = loadData(historyFilePath);
+                history.push(newMsg);
+                const currentChannelMsgs = history.filter(m => m.chatId === newMsg.chatId);
+                if (currentChannelMsgs.length > 50) {
+                    const firstIndex = history.findIndex(m => m.chatId === newMsg.chatId);
+                    if (firstIndex !== -1) history.splice(firstIndex, 1);
+                }
+                saveData(historyFilePath, history);
+
+                // Обогащаем для фронтенда
+                const hasPremium = PREMIUM_NICKNAMES.map(n => n.toLowerCase()).includes(userKey) || 
+                                     (users[userKey] && users[userKey].isPremium === true);
+                const enrichedMsg = {
+                    ...newMsg,
+                    isPremium: hasPremium,
+                    authorAvatar: users[userKey] ? users[userKey].avatar : ''
+                };
+
+                // Мгновенно рассылаем сообщение целевым клиентам без всяких интервалов!
+                if (enrichedMsg.chatId === 'global') {
+                    broadcast({ type: 'new_message', message: enrichedMsg });
+                } else {
+                    // Если ЛС, шлем только двум участникам диалога
+                    const usersInPrivate = enrichedMsg.chatId.replace('private_', '').split('_');
+                    usersInPrivate.forEach(uKey => {
+                        const targetWs = clients.get(uKey.toLowerCase());
+                        if (targetWs && targetWs.readyState === WebSocket.OPEN) {
+                            targetWs.send(JSON.stringify({ type: 'new_message', message: enrichedMsg }));
+                        }
+                    });
+                }
+            }
+        } catch(e) { console.error("WS error handler intercept:", e); }
+    });
+
+    ws.on('close', () => {
+        if (clientNickname) {
+            clients.delete(clientNickname.toLowerCase());
+            broadcast({ type: 'users_updated' });
+        }
+    });
+});
+
+function updateUserStatus(nickname) {
+    if (!nickname) return;
+    const users = loadData(usersFilePath);
+    const userKey = nickname.toLowerCase();
+    if (users[userKey]) {
+        users[userKey].lastSeen = Date.now();
+        saveData(usersFilePath, users);
+    }
+}
+
+function broadcast(data) {
+    const payload = JSON.stringify(data);
+    wss.clients.forEach((client) => {
+        if (client.readyState === WebSocket.OPEN) client.send(payload);
+    });
+}
+
+const PORT = process.env.PORT || 5002;
+server.listen(PORT, () => console.log(`Proton local kernel operating with WebSockets on port ${PORT}`));
