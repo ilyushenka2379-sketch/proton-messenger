@@ -328,6 +328,7 @@ function uploadImage(inputElement) {
 }
 
 let mediaRecorder; let audioChunks = []; let isRecording = false;
+
 async function toggleRecording() {
     const btn = document.getElementById('record-button');
     if (!isRecording) {
@@ -343,13 +344,20 @@ async function toggleRecording() {
                 r.readAsDataURL(blob);
                 stream.getTracks().forEach(t => t.stop());
             };
-            mediaRecorder.start(); isRecording = true;
-            if (btn) { btn.classList.add('recording'); btn.textContent = "STOP"; }
+            mediaRecorder.start(); 
+            isRecording = true;
+            if (btn) { 
+                btn.classList.add('recording'); 
+                btn.textContent = "🛑"; // Переключаем микрофон на кнопку СТОП
+            }
         } catch (err) { alert('Microphone access denied.'); }
     } else {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
         isRecording = false;
-        if (btn) { btn.classList.remove('recording'); btn.textContent = "REC"; }
+        if (btn) { 
+            btn.classList.remove('recording'); 
+            btn.textContent = "🎤"; // Возвращаем микрофон обратно
+        }
     }
 }
 

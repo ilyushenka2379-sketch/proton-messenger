@@ -128,10 +128,17 @@
                     <div class="emoji-section-title" style="color: #b8860b;">Proton Premium</div>
                     <div class="emoji-grid" id="premium-emojis"></div>
                 </div>
-                <label class="file-label" for="file-input">[F]</label>
+
+                <!-- Заменили [F] на скрепку 📎 -->
+                <label class="file-label" for="file-input">📎</label>
                 <input type="file" id="file-input" accept="image/*,video/*" onchange="uploadImage(this)" />
-                <button id="record-button" class="record-btn" onclick="toggleRecording()">REC</button>
-                <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">SMILE</button>
+    
+                <!-- Заменили REC на микрофон 🎤 -->
+                <button id="record-button" class="record-btn" onclick="toggleRecording()">🎤</button>
+    
+                <!-- Заменили SMILE на смайлик 😀 -->
+                <button type="button" class="emoji-btn" onclick="toggleEmojiPicker()">😀</button>
+    
                 <input id="input" autocomplete="off" placeholder="Type a message..." />
                 <button class="btn-main" onclick="sendMessage()">Send</button>
             </div>
