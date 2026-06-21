@@ -94,9 +94,10 @@ async function fetchUsers() {
             localStorage.setItem('proton_theme', me.theme || 'light');
             if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
             
-            const avatarUrl = me.avatar ? me.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            // ИСПРАВЛЕНО: Берем твою аватарку из localStorage, чтобы внизу панели всегда был Валерьяныч
+            const myAvatar = localStorage.getItem('proton_avatar') || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
             document.getElementById('current-profile-display').innerHTML = `
-                <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
+                <span class="avatar-circle" style="background-image: url('${myAvatar}')"></span>
                 <span>${userNickname}</span>
             `;
         }
@@ -120,6 +121,24 @@ async function fetchUsers() {
             `;
             container.appendChild(item);
         });
+
+        document.querySelectorAll('.msg').forEach(msgNode => {
+            const authorNode = msgNode.querySelector('.author');
+            if (!authorNode) return;
+            
+            const rawAuthor = authorNode.getAttribute('data-author-name');
+            if (!rawAuthor) return;
+            
+            const userObj = globalUsersCache.find(u => u.nickname.toLowerCase() === rawAuthor.toLowerCase());
+            if (userObj && userObj.avatar) {
+                const avatarCircle = msgNode.querySelector('.avatar-circle');
+                if (avatarCircle) {
+                    avatarCircle.style.backgroundImage = `url('${userObj.avatar}')`;
+                    avatarCircle.style.backgroundColor = 'transparent';
+                }
+            }
+        });
+
     } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
 
