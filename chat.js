@@ -121,9 +121,6 @@ async function fetchUsers() {
             container.appendChild(item);
         });
 
-        // БЕЗОПАСНОЕ ОБНОВЛЕНИЕ АВАТАРОК:
-        // Больше никакой опасной замены текста, которая роняла весь JS!
-        // Мы берем имя автора напрямую из специального дата-атрибута, который теперь прописан в renderMessages
         document.querySelectorAll('.msg').forEach(msgNode => {
             const authorNode = msgNode.querySelector('.author');
             if (!authorNode) return;
@@ -144,6 +141,43 @@ async function fetchUsers() {
     } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
 
+function initEmojiPicker() {
+    const standardGrid = document.getElementById('standard-emojis');
+    const premiumGrid = document.getElementById('premium-emojis');
+    if (standardGrid) {
+        standardGrid.innerHTML = '';
+        STANDARD_EMOJIS.forEach(emoji => {
+            const span = document.createElement('span'); span.className = 'emoji-item'; span.textContent = emoji;
+            span.onclick = () => insertEmoji(emoji, false); standardGrid.appendChild(span);
+        });
+    }
+    if (premiumGrid) {
+        premiumGrid.innerHTML = '';
+        PREMIUM_EMOJIS_SLOTS.forEach((src, index) => {
+            const img = document.createElement('img'); img.className = 'emoji-item premium-slot'; img.src = src;
+            img.style.width = '24px'; img.style.height = '24px'; img.style.objectFit = 'contain';
+            img.onclick = () => insertEmoji(`[proton_emoji_${index + 1}]`, true); premiumGrid.appendChild(img);
+        });
+    }
+}
+
+function toggleEmojiPicker() { const p = document.getElementById('emoji-picker'); if (p) p.classList.toggle('active'); }
+function insertEmoji(e, p) { if (p && !isCurrentUserPremium) { alert('🔒 Premium Only!'); return; } const i = document.getElementById('input'); if (i) { i.value += e; i.focus(); } }
+
+async function fetchHistory() {
+    try {
+        const response = await fetch(`/api/messages?chatId=${currentChatId}`);
+        const messages = await response.json();
+        const myLastMsg = [...messages].reverse().find(m => m.author === userNickname);
+        if (myLastMsg) {
+            isCurrentUserPremium = myLastMsg.isPremium;
+        } else {
+            if(userNickname.toLowerCase() === 'gdlyuha103') isCurrentUserPremium = true;
+        }
+        renderMessages(messages);
+    } catch (e) { console.error("Sync data transaction error:", e); }
+}
+
 function renderMessages(messages) {
     const messagesDiv = document.getElementById('messages');
     if (!messagesDiv) return;
@@ -156,7 +190,6 @@ function renderMessages(messages) {
         item.classList.add('msg');
         item.classList.add(data.author === userNickname ? 'my' : 'other');
 
-        // КРИТИЧЕСКОЕ УЛУЧШЕНИЕ: Добавляем data-author-name, чтобы fetchUsers мог безопасно читать имя автора
         let authorMarkup = '';
         if (data.isPremium) {
             authorMarkup = `<div class="author premium-user" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
