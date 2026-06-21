@@ -96,3 +96,18 @@ function showError(errorElement, buttonElement, text) {
     if (buttonElement) buttonElement.textContent = isRegisterMode ? "Register" : "Sign In";
     if (errorElement) { errorElement.textContent = text; errorElement.classList.remove('hidden'); }
 }
+
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('auth-password');
+    const eyeIcon = document.getElementById('toggle-password-eye');
+    
+    if (!passwordInput || !eyeIcon) return;
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.style.opacity = '1'; // Делаем ярче, когда пароль открыт
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.style.opacity = '0.5'; // Приглушаем, когда скрыт
+    }
+}
