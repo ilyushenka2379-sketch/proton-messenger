@@ -264,10 +264,20 @@ async function sendMessage(imageUrl = '') {
 function uploadImage(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
+    
+    // ИСПРАВЛЕНО: берем именно первый файл из массива через [0]
+    const targetFile = files[0]; 
+    
+    appendSystemMessage('System status: Processing file stream encoding...');
+
     const reader = new FileReader();
-    reader.onload = function (e) { sendMessage(e.target.result); };
-    reader.onerror = function (error) { alert('Upload failed.'); };
-    reader.readAsDataURL(files); 
+    reader.onload = function (e) { 
+        sendMessage(e.target.result); 
+    };
+    reader.onerror = function (error) { 
+        alert('Upload failed.'); 
+    };
+    reader.readAsDataURL(targetFile); // ИСПРАВЛЕНО: читаем конкретный файл
 }
 
 let mediaRecorder;
