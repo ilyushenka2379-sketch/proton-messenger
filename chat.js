@@ -120,80 +120,22 @@ async function fetchUsers() {
             `;
             container.appendChild(item);
         });
-    } catch(e) { console.error("Users sync stream interrupted:", e); }
-}
 
-function initEmojiPicker() {
-    const standardGrid = document.getElementById('standard-emojis');
-    const premiumGrid = document.getElementById('premium-emojis');
-    if (standardGrid) {
-        standardGrid.innerHTML = '';
-        STANDARD_EMOJIS.forEach(emoji => {
-            const span = document.createElement('span'); span.className = 'emoji-item'; span.textContent = emoji;
-            span.onclick = () => insertEmoji(emoji, false); standardGrid.appendChild(span);
+        // БЕЗОПАСНОЕ ОБНОВЛЕНИЕ: Просто ищем все аватарки на экране и обновляем их фоны без перезагрузки истории!
+        document.querySelectorAll('.msg').forEach(msgNode => {
+            const authorNode = msgNode.querySelector('.author');
+            if (!authorNode) return;
+            // Достаем имя автора из его текстового содержимого (убирая корону, если она есть)
+            const authorName = authorNode.textContent.replace('👑', '').trim();
+            const userObj = globalUsersCache.find(u => u.nickname.toLowerCase() === authorName.toLowerCase());
+            if (userObj && userObj.avatar) {
+                const avatarCircle = msgNode.querySelector('.avatar-circle');
+                if (avatarCircle) {
+                    avatarCircle.style.backgroundImage = `url('${userObj.avatar}')`;
+                    avatarCircle.style.backgroundColor = 'transparent';
+                }
+            }
         });
-    }
-    if (premiumGrid) {
-        premiumGrid.innerHTML = '';
-        PREMIUM_EMOJIS_SLOTS.forEach((src, index) => {
-            const img = document.createElement('img'); img.className = 'emoji-item premium-slot'; img.src = src;
-            img.style.width = '24px'; img.style.height = '24px'; img.style.objectFit = 'contain';
-            img.onclick = () => insertEmoji(`[proton_emoji_${index + 1}]`, true); premiumGrid.appendChild(img);
-        });
-    }
-}
-
-function toggleEmojiPicker() { const p = document.getElementById('emoji-picker'); if (p) p.classList.toggle('active'); }
-function insertEmoji(e, p) { if (p && !isCurrentUserPremium) { alert('🔒 Premium Only!'); return; } const i = document.getElementById('input'); if (i) { i.value += e; i.focus(); } }
-
-async function fetchUsers() {
-    try {
-        const response = await fetch('/api/users');
-        globalUsersCache = await response.json();
-        const container = document.getElementById('users-directory');
-        if(!container) return;
-        
-        const me = globalUsersCache.find(u => u.nickname.toLowerCase() === userNickname.toLowerCase());
-        if (me) {
-            document.documentElement.setAttribute('data-theme', me.theme || 'light');
-            document.getElementById('theme-selector').value = me.theme || 'light';
-            localStorage.setItem('proton_theme', me.theme || 'light');
-            if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
-            
-            const avatarUrl = me.avatar ? me.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-            document.getElementById('current-profile-display').innerHTML = `
-                <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
-                <span>${userNickname}</span>
-            `;
-        }
-        
-        container.innerHTML = '';
-        globalUsersCache.forEach(user => {
-            if(user.nickname.toLowerCase() === userNickname.toLowerCase()) return;
-            
-            const privateId = getPrivateChatId(user.nickname);
-            const item = document.createElement('div');
-            item.className = `room-item ${currentChatId === privateId ? 'active' : ''}`;
-            item.id = `user-room-${user.nickname}`;
-            
-            const userAvatar = user.avatar ? user.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-            const statusClass = user.isOnline ? 'online' : '';
-            
-            item.innerHTML = `
-                <span class="avatar-circle" style="background-image: url('${userAvatar}')" onclick="openProfileCard('${user.nickname}', event)"></span>
-                <span onclick="switchChat('${privateId}', '${user.nickname}')">${user.nickname}</span>
-                <span class="status-dot ${statusClass}"></span>
-            `;
-            container.appendChild(item);
-        });
-
-        // КРИТИЧЕСКИЙ ИСПРАВЛЕННЫЙ УЗЕЛ: 
-        // Принудительно обновляем сообщения, как только подтянулись свежие аватарки!
-        const messagesDiv = document.getElementById('messages');
-        if (messagesDiv && messagesDiv.children.length > 0) {
-            // Запрашиваем историю из локального кэша заново, чтобы перерисовать кружочки
-            fetchHistory(); 
-        }
 
     } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
@@ -217,11 +159,16 @@ function renderMessages(messages) {
             authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
+        // Берем аватарку из кэша, если она есть, иначе ставим пустую прозрачную заглушку
         const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
         const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
         let avi = fallback;
-        let extraStyle = 'background-color: #64748b;';
-        if (cachedUser && cachedUser.avatar) { avi = cachedUser.avatar; extraStyle = 'background-color: transparent;'; }
+        let extraStyle = 'background-color: #64748b;'; // Серый цвет, пока аватарка не загрузилась
+
+        if (cachedUser && cachedUser.avatar) {
+            avi = cachedUser.avatar;
+            extraStyle = 'background-color: transparent;';
+        }
 
         const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
         let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
@@ -245,7 +192,9 @@ function renderMessages(messages) {
                 contentMarkup += `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
             }
         }
-        contentMarkup += `</div>`; item.innerHTML = contentMarkup; messagesDiv.appendChild(item);
+        contentMarkup += `</div>`; 
+        item.innerHTML = contentMarkup; 
+        messagesDiv.appendChild(item);
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
