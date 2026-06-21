@@ -3,6 +3,22 @@ if (localStorage.getItem('proton_nickname')) {
 }
 
 let isRegisterMode = false;
+let selectedTheme = 'dark'; // По умолчанию темная
+
+// ФУНКЦИЯ ДИНАМИЧЕСКОГО ПЕРЕКЛЮЧЕНИЯ ТЕМЫ О К Н А ВХОДА
+function changeAuthTheme(themeMode) {
+    selectedTheme = themeMode;
+    document.getElementById('auth-btn-white').classList.remove('active');
+    document.getElementById('auth-btn-dark').classList.remove('active');
+    
+    if (themeMode === 'white') {
+        document.getElementById('auth-btn-white').classList.add('active');
+        document.documentElement.setAttribute('data-auth-theme', 'white');
+    } else {
+        document.getElementById('auth-btn-dark').classList.add('active');
+        document.documentElement.removeAttribute('data-auth-theme');
+    }
+}
 
 function toggleAuthMode() {
     isRegisterMode = !isRegisterMode;
@@ -39,17 +55,14 @@ async function handleAuth() {
     const password = authPasswordInput.value.trim();
     
     if (!nickname || !password) {
-        showError(errorMessage, loginButton, 'Fields cannot be empty! Enter nickname and password.');
+        showError(errorMessage, loginButton, 'Fields cannot be empty!');
         return;
     }
 
-    if (loginButton) {
-        loginButton.textContent = isRegisterMode ? "Processing registration..." : "Processing authorization...";
-    }
+    if (loginButton) loginButton.textContent = "Processing...";
     if (errorMessage) errorMessage.classList.add('hidden');
 
     try {
-        console.log("Transmitting identity credentials array payload...");
         const response = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -59,25 +72,27 @@ async function handleAuth() {
         const result = await response.json();
 
         if (response.ok && result.success) {
-            console.log("Session verified successfully for user:", result.nickname);
+            // СОХРАНЯЕМ ТЕМУ ИЗ ЛОГИНА ДЛЯ МЕССРЕНДЖЕРА ЧАТА
+            localStorage.setItem('proton_theme', selectedTheme);
             localStorage.setItem('proton_nickname', result.nickname);
+            
+            // Также отправляем запрос на сервер, чтобы обновить тему в users.json
+            await fetch('/api/profile/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nickname: result.nickname, theme: selectedTheme })
+            });
+
             window.location.href = 'chat.html';
         } else {
-            console.warn("Authorization rejected by local kernel:", result.error);
             showError(errorMessage, loginButton, result.error || 'Authorization failed.');
         }
     } catch (err) {
-        console.error("Local network pipeline broken:", err);
-        showError(errorMessage, loginButton, 'Network error. Core server unreachable.');
+        showError(errorMessage, loginButton, 'Network error. Server unreachable.');
     }
 }
 
 function showError(errorElement, buttonElement, text) {
-    if (buttonElement) {
-        buttonElement.textContent = isRegisterMode ? "Register" : "Sign In";
-    }
-    if (errorElement) {
-        errorElement.textContent = text;
-        errorElement.classList.remove('hidden');
-    }
+    if (buttonElement) buttonElement.textContent = isRegisterMode ? "Register" : "Sign In";
+    if (errorElement) { errorElement.textContent = text; errorElement.classList.remove('hidden'); }
 }
