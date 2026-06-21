@@ -1,4 +1,3 @@
-// Restoration guard channel
 if (localStorage.getItem('proton_nickname')) {
     window.location.href = 'chat.html';
 }
@@ -54,7 +53,7 @@ async function handleAuth() {
         const response = await fetch('/api/auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nickname, password, isRegisterMode }) // <-- ОТПРАВЛЯЕМ РЕЖИМ НА СЕРВЕР
+            body: JSON.stringify({ nickname, password, isRegisterMode })
         });
         
         const result = await response.json();
