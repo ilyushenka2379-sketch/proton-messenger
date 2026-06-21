@@ -121,13 +121,17 @@ async function fetchUsers() {
             container.appendChild(item);
         });
 
-        // БЕЗОПАСНОЕ ОБНОВЛЕНИЕ: Просто ищем все аватарки на экране и обновляем их фоны без перезагрузки истории!
+        // БЕЗОПАСНОЕ ОБНОВЛЕНИЕ АВАТАРОК:
+        // Больше никакой опасной замены текста, которая роняла весь JS!
+        // Мы берем имя автора напрямую из специального дата-атрибута, который теперь прописан в renderMessages
         document.querySelectorAll('.msg').forEach(msgNode => {
             const authorNode = msgNode.querySelector('.author');
             if (!authorNode) return;
-            // Достаем имя автора из его текстового содержимого (убирая корону, если она есть)
-            const authorName = authorNode.textContent.replace('👑', '').trim();
-            const userObj = globalUsersCache.find(u => u.nickname.toLowerCase() === authorName.toLowerCase());
+            
+            const rawAuthor = authorNode.getAttribute('data-author-name');
+            if (!rawAuthor) return;
+            
+            const userObj = globalUsersCache.find(u => u.nickname.toLowerCase() === rawAuthor.toLowerCase());
             if (userObj && userObj.avatar) {
                 const avatarCircle = msgNode.querySelector('.avatar-circle');
                 if (avatarCircle) {
@@ -152,18 +156,18 @@ function renderMessages(messages) {
         item.classList.add('msg');
         item.classList.add(data.author === userNickname ? 'my' : 'other');
 
+        // КРИТИЧЕСКОЕ УЛУЧШЕНИЕ: Добавляем data-author-name, чтобы fetchUsers мог безопасно читать имя автора
         let authorMarkup = '';
         if (data.isPremium) {
-            authorMarkup = `<div class="author premium-user" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
+            authorMarkup = `<div class="author premium-user" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)"><span class="premium-crown">👑</span>${data.author}</div>`;
         } else {
-            authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
+            authorMarkup = `<div class="author" data-author-name="${data.author}" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
-        // Берем аватарку из кэша, если она есть, иначе ставим пустую прозрачную заглушку
         const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
         const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
         let avi = fallback;
-        let extraStyle = 'background-color: #64748b;'; // Серый цвет, пока аватарка не загрузилась
+        let extraStyle = 'background-color: #64748b;'; 
 
         if (cachedUser && cachedUser.avatar) {
             avi = cachedUser.avatar;
