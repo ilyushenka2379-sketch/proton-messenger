@@ -146,18 +146,56 @@ function initEmojiPicker() {
 function toggleEmojiPicker() { const p = document.getElementById('emoji-picker'); if (p) p.classList.toggle('active'); }
 function insertEmoji(e, p) { if (p && !isCurrentUserPremium) { alert('🔒 Premium Only!'); return; } const i = document.getElementById('input'); if (i) { i.value += e; i.focus(); } }
 
-async function fetchHistory() {
+async function fetchUsers() {
     try {
-        const response = await fetch(`/api/messages?chatId=${currentChatId}`);
-        const messages = await response.json();
-        const myLastMsg = [...messages].reverse().find(m => m.author === userNickname);
-        if (myLastMsg) {
-            isCurrentUserPremium = myLastMsg.isPremium;
-        } else {
-            if(userNickname.toLowerCase() === 'gdlyuha103') isCurrentUserPremium = true;
+        const response = await fetch('/api/users');
+        globalUsersCache = await response.json();
+        const container = document.getElementById('users-directory');
+        if(!container) return;
+        
+        const me = globalUsersCache.find(u => u.nickname.toLowerCase() === userNickname.toLowerCase());
+        if (me) {
+            document.documentElement.setAttribute('data-theme', me.theme || 'light');
+            document.getElementById('theme-selector').value = me.theme || 'light';
+            localStorage.setItem('proton_theme', me.theme || 'light');
+            if (me.avatar) localStorage.setItem('proton_avatar', me.avatar);
+            
+            const avatarUrl = me.avatar ? me.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            document.getElementById('current-profile-display').innerHTML = `
+                <span class="avatar-circle" style="background-image: url('${avatarUrl}')"></span>
+                <span>${userNickname}</span>
+            `;
         }
-        renderMessages(messages);
-    } catch (e) { console.error("Sync data transaction error:", e); }
+        
+        container.innerHTML = '';
+        globalUsersCache.forEach(user => {
+            if(user.nickname.toLowerCase() === userNickname.toLowerCase()) return;
+            
+            const privateId = getPrivateChatId(user.nickname);
+            const item = document.createElement('div');
+            item.className = `room-item ${currentChatId === privateId ? 'active' : ''}`;
+            item.id = `user-room-${user.nickname}`;
+            
+            const userAvatar = user.avatar ? user.avatar : "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+            const statusClass = user.isOnline ? 'online' : '';
+            
+            item.innerHTML = `
+                <span class="avatar-circle" style="background-image: url('${userAvatar}')" onclick="openProfileCard('${user.nickname}', event)"></span>
+                <span onclick="switchChat('${privateId}', '${user.nickname}')">${user.nickname}</span>
+                <span class="status-dot ${statusClass}"></span>
+            `;
+            container.appendChild(item);
+        });
+
+        // КРИТИЧЕСКИЙ ИСПРАВЛЕННЫЙ УЗЕЛ: 
+        // Принудительно обновляем сообщения, как только подтянулись свежие аватарки!
+        const messagesDiv = document.getElementById('messages');
+        if (messagesDiv && messagesDiv.children.length > 0) {
+            // Запрашиваем историю из локального кэша заново, чтобы перерисовать кружочки
+            fetchHistory(); 
+        }
+
+    } catch(e) { console.error("Users sync stream interrupted:", e); }
 }
 
 function renderMessages(messages) {
