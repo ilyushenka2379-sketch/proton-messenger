@@ -312,23 +312,31 @@ function closeSettingsModal() { document.getElementById('settings-modal').classL
 function handleSettingsAvatar(inputElement) {
     const files = inputElement.files;
     if (!files || files.length === 0) return;
+    
+    // БЕРЕМ ИМЕННО ПЕРВЫЙ ФАЙЛ ИЗ СПИСКА
+    const targetFile = files[0]; 
+    
     const reader = new FileReader();
     reader.onload = async function (e) {
         const base64 = e.target.result;
         
-        // Сразу жестко прописываем картинку в превью и сохраняем локально
+        // Обновляем превью в настройках
         document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${base64}')`;
+        
+        // Перезаписываем локальную память на Валерьяныча
         localStorage.setItem('proton_avatar', base64);
         
-        // Отправляем на сервер для сохранения в users.json
+        // Отправляем Валерьяныча на сервер, чтобы обновить users.json
         await fetch('/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nickname: userNickname, avatar: base64 })
         });
+        
         fetchUsers();
     };
-    reader.readAsDataURL(files);
+    // ИСПРАВЛЕНО: читаем строго целевой файл targetFile, а не массив files
+    reader.readAsDataURL(targetFile); 
 }
 
 async function handleSettingsTheme(themeValue) {
