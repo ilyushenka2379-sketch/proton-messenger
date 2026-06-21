@@ -179,10 +179,23 @@ function renderMessages(messages) {
             authorMarkup = `<div class="author" onclick="openProfileCard('${data.author}', event)">${data.author}</div>`;
         }
 
-        // ЖЕЛЕЗОБЕТОННЫЙ ВЫВОД АВАТАРОК: Берём готовую строку Base64, которую прислал сервер
+        const cachedUser = globalUsersCache.find(u => u.nickname.toLowerCase() === data.author.toLowerCase());
         const fallback = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        let avi = (data.authorAvatar && data.authorAvatar.trim() !== '') ? data.authorAvatar : fallback;
-        let extraStyle = (data.authorAvatar && data.authorAvatar.trim() !== '') ? 'background-color: transparent;' : 'background-color: #64748b;';
+        let avi = fallback;
+        let extraStyle = 'background-color: #64748b;'; 
+
+        // Если сообщение твоё — берём аватарку мгновенно из локальной памяти
+        if (data.author === userNickname) {
+            const myLocalAvatar = localStorage.getItem('proton_avatar');
+            if (myLocalAvatar) {
+                avi = myLocalAvatar;
+                extraStyle = 'background-color: transparent;';
+            }
+        } else if (cachedUser && cachedUser.avatar) {
+            // Если чужое — берём из кэша сервера
+            avi = cachedUser.avatar;
+            extraStyle = 'background-color: transparent;';
+        }
 
         const avaImg = `<span class="avatar-circle" style="background-image: url('${avi}'); ${extraStyle}" onclick="openProfileCard('${data.author}', event)"></span>`;
         let contentMarkup = `${avaImg}<div class="msg-body">${authorMarkup}`;
@@ -206,7 +219,9 @@ function renderMessages(messages) {
                 contentMarkup += `<img class="chat-media" src="${data.imageUrl}" alt="photo">`;
             }
         }
-        contentMarkup += `</div>`; item.innerHTML = contentMarkup; messagesDiv.appendChild(item);
+        contentMarkup += `</div>`; 
+        item.innerHTML = contentMarkup; 
+        messagesDiv.appendChild(item);
     });
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
@@ -282,9 +297,11 @@ function openSettingsModal() {
     const modal = document.getElementById('settings-modal');
     if (!modal) return;
     modal.classList.add('active');
-    const me = globalUsersCache.find(u => u.nickname.toLowerCase() === userNickname.toLowerCase());
-    if (me && me.avatar) {
-        document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${me.avatar}')`;
+    
+    // ЖЕЛЕЗОБЕТОННО: Берем аватарку напрямую из локальной памяти, она там есть ВСЕГДА
+    const savedAvatar = localStorage.getItem('proton_avatar');
+    if (savedAvatar && savedAvatar.trim() !== '') {
+        document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${savedAvatar}')`;
     } else {
         document.getElementById('settings-avatar-preview').style.backgroundImage = 'none';
     }
@@ -298,8 +315,12 @@ function handleSettingsAvatar(inputElement) {
     const reader = new FileReader();
     reader.onload = async function (e) {
         const base64 = e.target.result;
+        
+        // Сразу жестко прописываем картинку в превью и сохраняем локально
         document.getElementById('settings-avatar-preview').style.backgroundImage = `url('${base64}')`;
         localStorage.setItem('proton_avatar', base64);
+        
+        // Отправляем на сервер для сохранения в users.json
         await fetch('/api/profile/update', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -307,7 +328,7 @@ function handleSettingsAvatar(inputElement) {
         });
         fetchUsers();
     };
-    reader.readAsDataURL(files[0]); // Строго первый файл для настроек аватара
+    reader.readAsDataURL(files);
 }
 
 async function handleSettingsTheme(themeValue) {
