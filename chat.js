@@ -40,7 +40,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function getPrivateChatId(targetUser) {
     const sorted = [userNickname.toLowerCase(), targetUser.toLowerCase()].sort();
-    return `private_${sorted[0]}_${sorted[1]}`;
+    return `private_${sorted}_${sorted}`;
 }
 
 function switchChat(chatId, displayTitle) {
@@ -266,4 +266,19 @@ async function toggleRecording() {
         isRecording = false;
         if (btn) { btn.classList.remove('recording'); btn.textContent = "REC"; }
     }
+}
+
+function appendSystemMessage(text) {
+    const messagesDiv = document.getElementById('messages');
+    if (!messagesDiv) return;
+    const item = document.createElement('div');
+    item.style.fontSize = '12px';
+    item.style.color = '#888';
+    item.textContent = text;
+    messagesDiv.appendChild(item);
+}
+
+function logout() { 
+    localStorage.removeItem('proton_nickname');
+    window.location.href = 'index.html';
 }
